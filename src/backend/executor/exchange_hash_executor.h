@@ -58,7 +58,7 @@ class ExchangeHashExecutor : public AbstractExecutor {
   HashMapType hash_table_;
 
   /** @brief Input tiles from child node */
-  std::vector<LogicalTile *> child_tiles_;
+  std::vector<std::unique_ptr<LogicalTile>> child_tiles_;
 
   std::vector<oid_t> column_ids_;
 

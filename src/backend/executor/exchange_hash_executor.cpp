@@ -22,7 +22,6 @@ ExchangeHashExecutor::ExchangeHashExecutor(const planner::AbstractPlan *node,
  */
 bool ExchangeHashExecutor::DInit() {
   assert(children_.size() == 1);
-  printf("hello. exchange Hash Executor\n");
   // Initialize executor state
   done_ = false;
   result_itr = 0;
@@ -59,6 +58,8 @@ void ExchangeHashExecutor::BuildHashTableThreadMain(LogicalTile *tile, size_t ch
   }
 
   barrier->Release();
+
+  printf("release one.\n");
 }
 
 /*
@@ -89,18 +90,19 @@ bool ExchangeHashExecutor::DExecute() {
     // First, get all the input logical tiles
     while (children_[0]->Execute()) {
       auto tile = children_[0]->GetOutput();
-      child_tiles_.push_back(tile);
+      child_tiles_.emplace_back(tile);
     }
     EnsureTableSize();
-    Barrier barrier(child_tiles_.size());
+    Barrier barrier((thread_no)child_tiles_.size());
     for(size_t no = 0; no<child_tiles_.size(); ++no) {
       std::function<void()> f_build_hash_table = std::bind(&ExchangeHashExecutor::BuildHashTableThreadMain, this,
-                                                           child_tiles_[no], no, &barrier);
+                                                           child_tiles_[no].get(), no, &barrier);
       ThreadManager::GetInstance().AddTask(f_build_hash_table);
     }
 
     // make sure building hashmap is done before return any child tiles.
     barrier.Wait();
+    printf("pass wait.\n");
     done_ = true;
   }
 
@@ -110,7 +112,7 @@ bool ExchangeHashExecutor::DExecute() {
       result_itr++;
       continue;
     } else {
-      SetOutput(child_tiles_[result_itr++]);
+      SetOutput(child_tiles_[result_itr++].release());
       LOG_TRACE("Exchange Hash Executor : true -- return tile one at a time ");
       return true;
     }
