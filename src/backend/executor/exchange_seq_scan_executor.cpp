@@ -106,7 +106,7 @@ bool ExchangeSeqScanExecutor::DExecute() {
   assert(finished_number_==tile_group_number_);
   if(result_.empty())
     return false;
-  SetOutput(result_.front().replease());
+  SetOutput(result_.front().release());
   result_.pop();
   return true;
 }
