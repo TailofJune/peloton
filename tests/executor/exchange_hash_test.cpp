@@ -168,6 +168,16 @@ void ExpectNormalTileResults(
   }
 }
 
+/*
+ * Build two hash tables on the same table using HashExecutor and ExchangHashExecutor
+ * Compare the results (which should be identical)
+ * A little confusion clarification:
+ * There is only one table, even though its name (riglt_table) somehow indicates
+ * there might be a left one.
+ * The reason we use right table as variable name in the test is because
+ * normally, hash executor is the right child of hash join executor and it consumes the right
+ * table of a hash join executor.
+ */
 TEST_F(ExchangeHashExecutorTests, CorrectnessTest) {
   constexpr size_t tile_num = 300;
   constexpr size_t row_num = 1000;
@@ -176,13 +186,12 @@ TEST_F(ExchangeHashExecutorTests, CorrectnessTest) {
 
   // Create table.
   std::unique_ptr<storage::DataTable> right_table(CreateTable(tile_num, row_num));
-  std::unique_ptr<storage::DataTable> right_table2(CreateTable(tile_num, row_num));
 
   LOG_INFO("CreateTable done");
 
   MockExecutor right_table_scan_executor;
 
-  // create tile groups
+  // Create tile groups
   std::vector<std::unique_ptr<executor::LogicalTile>>
           right_table_logical_tile_ptrs;
   for(size_t right_table_tile_group_itr = 0;
@@ -233,7 +242,7 @@ TEST_F(ExchangeHashExecutorTests, CorrectnessTest) {
       right_table_tile_group_itr++) {
     std::unique_ptr<executor::LogicalTile> right_table_logical_tile(
             executor::LogicalTileFactory::WrapTileGroup(
-                    right_table2->GetTileGroup(right_table_tile_group_itr)));
+                    right_table->GetTileGroup(right_table_tile_group_itr)));
     right_table_logical_tile_ptrs2.push_back(
             std::move(right_table_logical_tile));
   }
