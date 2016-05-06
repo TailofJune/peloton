@@ -295,14 +295,14 @@ TEST_F(ExchangeHashExecutorTests, CorrectnessTest) {
 
 
 TEST_F(ExchangeHashExecutorTests, SpeedTest) {
-  constexpr size_t tile_num = 30000;
-  constexpr size_t row_num = 1000;
+  constexpr size_t tile_num = 300;
+  constexpr size_t row_num = 100000;
 
   // Create table.
   std::unique_ptr<storage::DataTable> right_table(CreateTable(tile_num, row_num));
 
   LOG_INFO("CreateTable done");
-  
+
   // Parallel version
   double time = 0;
   for(int i=0; i<10; ++i) {

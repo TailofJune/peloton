@@ -90,12 +90,14 @@ bool ExchangeHashExecutor::DExecute() {
       column_ids_.push_back(tuple_value->GetColumnId());
     }
 
+    size_t tuple_count = 0;
     // First, get all the input logical tiles
     while (children_[0]->Execute()) {
       auto tile = children_[0]->GetOutput();
+      tuple_count += tile->GetTupleCount();
       child_tiles_.emplace_back(tile);
     }
-    EnsureTableSize();
+    EnsureTableSize(tuple_count);
     Barrier barrier((thread_no)child_tiles_.size());
     for(size_t no = 0; no<child_tiles_.size(); ++no) {
       std::function<void()> f_build_hash_table = std::bind(&ExchangeHashExecutor::BuildHashTableThreadMain, this,
