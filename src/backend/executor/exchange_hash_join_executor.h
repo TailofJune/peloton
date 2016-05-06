@@ -1,7 +1,3 @@
-//
-// Created by Lu Zhang on 4/10/16.
-//
-
 #pragma once
 
 #include <deque>
@@ -114,7 +110,6 @@ namespace peloton {
       }
 
       inline void RecordMatchedLeftRow(size_t tile_idx, oid_t row_idx) {
-//        printf("Begin----------RecordMatchedLeftRow.\n");
         switch (join_type_) {
           case JOIN_TYPE_LEFT:
           case JOIN_TYPE_OUTER:

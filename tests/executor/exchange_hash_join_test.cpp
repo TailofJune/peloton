@@ -842,7 +842,7 @@ TEST_F(ExchangeHashJoinTests, JoinPredicateTest) {
   }
 }
 
-
+/*
 TEST_F(ExchangeHashJoinTests, LargeTableCorrectnessTest) {
   BuildTestTableUtil join_test;
   join_test.CreateTestTable(1000, 65, 20, true);
@@ -854,8 +854,6 @@ TEST_F(ExchangeHashJoinTests, LargeTableCorrectnessTest) {
   join_test.ExecuteJoinTest(PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN, JOIN_TYPE_OUTER, LargeTableCorrectnessTest, true, 10);
 
 }
-
-/*
 
 
 TEST_F(ExchangeHashJoinTests, SpeedTest) {

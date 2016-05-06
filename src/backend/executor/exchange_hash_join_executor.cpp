@@ -1,7 +1,3 @@
-//
-// Created by Lu Zhang on 4/10/16.
-//
-
 #include <vector>
 
 #include "backend/common/types.h"
@@ -48,7 +44,6 @@ namespace executor {
  */
     void ExchangeHashJoinExecutor::GetRightHashTable(Barrier * barrier){
 
-      const auto start = std::chrono::system_clock::now();
 
       LOG_INFO("Build Right Child Hash Table Task picked up \n");
       while (children_[1]->Execute()) {
@@ -60,15 +55,11 @@ namespace executor {
       barrier->Release();
 
 
-      const auto end = std::chrono::system_clock::now();
-      const std::chrono::duration<double> diff = end-start;
-      LOG_INFO("Get Right Hash Table takes %lf ms\n", diff.count()*1000);
 
     }
 
     void ExchangeHashJoinExecutor::GetLeftScanResult(Barrier * barrier){
 
-      const auto start = std::chrono::system_clock::now();
       LOG_INFO("Build Left Child Scan Task picked up \n");
       while(children_[0]->Execute()){
         BufferLeftTile(children_[0]->GetOutput());
@@ -80,10 +71,6 @@ namespace executor {
         LOG_INFO("left_result_tiles.size():%lu, tuple num per tile:%lu\n", left_result_tiles_.size(), left_result_tiles_.back().get()->GetTupleCount());
       }
       barrier->Release();
-      const auto end = std::chrono::system_clock::now();
-      const std::chrono::duration<double> diff = end-start;
-      const double ms = diff.count()*1000;
-      LOG_INFO("Get Left Scan takes %lf ms\n", ms);
     }
 
 
@@ -91,7 +78,6 @@ namespace executor {
                                          PesudoBarrier *barrier) {
 
       LOG_INFO("Probe Task picked up \n");
-      const auto start = std::chrono::system_clock::now();
 
       const thread_no self_no = (*no)++;
       const size_t begin_idx = self_no * SIZE_PER_PARTITION;
@@ -100,7 +86,6 @@ namespace executor {
 
       auto &hash_table = hash_executor_->GetHashTable();
       auto &hashed_col_ids = hash_executor_->GetHashKeyIds();
-
 
 
       // iterate over its task range tiles
@@ -120,19 +105,9 @@ namespace executor {
 
           executor::ExchangeHashExecutor::MapValueType right_tuples;
 
-//          std::unordered_set<std::pair<size_t, oid_t>,
-//            boost::hash<std::pair<size_t, oid_t>>> right_tuples;
           bool if_match = hash_table.find(left_tuple, right_tuples);
-        //  bool if_match = hash_table.contains(left_tuple);
-          // auto got = hash_table.find(left_tuple);
           if (if_match) {
-          // if (got != hash_table.end()) {
-//            auto right_tuples = hash_table.find(left_tuple);
-            // auto right_tuples = got->second;
             RecordMatchedLeftRow(cur_idx, left_tile_itr);
-
-
-
             // Go over the matching right tuples
             const expression::ContainerTuple<executor::LogicalTile> left_tuple_test(
                         left_tile, left_tile_itr);
@@ -163,7 +138,6 @@ namespace executor {
                   &right_result_tiles_[location.first]->GetPositionLists());
               }
 
-
               // Add join tuple
               pos_lists_builder.AddRow(left_tile_itr, location.second);
 
@@ -178,16 +152,10 @@ namespace executor {
         if (pos_lists_builder.Size() > 0) {
           LOG_TRACE("Join tile size : %lu \n", pos_lists_builder.Size());
           output_tile->SetPositionListsAndVisibility(pos_lists_builder.Release());
-          // lockfree_buffered_output_tiles.push(output_tile.release());
           lockfree_queue_.TryPush(output_tile.release());
         }
       }
 
-
-      const auto end = std::chrono::system_clock::now();
-      const std::chrono::duration<double> diff = end-start;
-      const double ms = diff.count()*1000;
-      LOG_INFO("Probe thread %u takes %lf ms\n", (unsigned)self_no, ms);
 
       LOG_TRACE("Probe() thread %u done", (unsigned)self_no);
       barrier->Release();
@@ -202,26 +170,14 @@ namespace executor {
  * @return true on success, false otherwise.
  */
     bool ExchangeHashJoinExecutor::DExecute() {
-
-
       // Loop until we have non-empty result tile or exit
       for (; ;) {
-        // if (lockfree_buffered_output_tiles.empty() == false) {
-        //if (lockfree_buffered_output_tiles.empty() == false) {
         LogicalTile *output_tile = nullptr;
         if (lockfree_queue_.TryPop(output_tile) == true) {
-          // LogicalTile *output_tile = nullptr;
-          // lockfree_buffered_output_tiles.pop(output_tile);
           SetOutput(output_tile);
-          // exit 0
           return true;
         }
 
-
-        // option1. build right hashTable and collect left child at the same time
-        // option2. build right hashTable and then collect part of left child every time
-
-        // Here takes option1.
         if (prepare_children_ == false) {
           // build right hashTable
           Barrier build_hashtable_barrier(1);
@@ -241,18 +197,14 @@ namespace executor {
           collect_scan_result_barrier.Wait();
           LOG_INFO("Ready to Probe.\n");
 
-          // todo: How can I do that:
-          // Once I find right_child is empty, stop collect left children.
           if ((right_result_tiles_.size() == 0)
               && (join_type_ == JOIN_TYPE_INNER || join_type_ == JOIN_TYPE_RIGHT)) {
             no_need_to_probe_ = true;
 
-            // exit 1
             return false;
           } else if ((left_result_tiles_.size() == 0)
                      && (join_type_ == JOIN_TYPE_INNER || join_type_ == JOIN_TYPE_LEFT)) {
             no_need_to_probe_ = true;
-            // exit2
             return false;
           }
 
@@ -273,31 +225,17 @@ namespace executor {
 
           // sub tasks begin
           std::atomic<thread_no> no(0);
-//          Barrier probe_barrier(partition_number);
           probe_barrier_.SetTotal(partition_number);
           std::function<void()> probe_worker =
             std::bind(&ExchangeHashJoinExecutor::Probe, this,
                       &no, &probe_barrier_);
-      //  LaunchWorkerThreads(partition_number - 1, probe_worker);
           LaunchWorkerThreads(partition_number, probe_worker);
 
-
-          // here main thread also pariticipate in doing sub tasks.
-          // todo: consider alternatives: main thread push result on by on
-      //  Probe(&no, &probe_barrier_);
-
-//          probe_barrier.Wait();
           prepare_children_ = true;
         }
 
-
-        // return ret (ont by one)
-        // LogicalTile *output_tile = nullptr;
         if (lockfree_queue_.TryPop(output_tile) == true) {
-          // LogicalTile *output_tile = nullptr;
-          // lockfree_buffered_output_tiles.pop(output_tile);
           SetOutput(output_tile);
-          // exit 0
           return true;
         }
 
@@ -305,14 +243,8 @@ namespace executor {
           if (probe_barrier_.IsNoNeedToDo() == false &&
               probe_barrier_.IsDone() == false){
               std::this_thread::sleep_for(std::chrono::milliseconds(1));
-
               continue;
           }
-          main_end = std::chrono::system_clock::now();
-          const std::chrono::duration<double> diff = main_end - main_start;
-          const double ms = diff.count()*1000;
-          LOG_INFO("Inner part takes %lf ms \n", ms);
-
           if (BuildOuterJoinOutput()){
             continue;
           } else{
@@ -428,11 +360,6 @@ namespace executor {
       assert(left_result_tiles_.size() - no_matching_left_row_sets_.size() == 1);
       no_matching_left_row_sets_.emplace_back(left_result_tiles_.back()->begin(),
                                               left_result_tiles_.back()->end());
-
-//      ConcurrentOidSet set;
-//      set.container_ = std::unordered_set<oid_t>(left_result_tiles_.back()->begin(),
-//                     left_result_tiles_.back()->end());
-//      exhj_no_matching_left_row_sets_.emplace_back(std::move(set));
     }
 
 /**
@@ -441,18 +368,10 @@ namespace executor {
     void ExchangeHashJoinExecutor::UpdateRightJoinRowSets() {
       assert(right_result_tiles_.size() - exhj_no_matching_right_row_sets_.size() == 1);
       ConcurrentOidSet set;
-      // not sure if move is safe....
-//      set.container_ = std::move(std::unordered_set<oid_t>(right_result_tiles_.back()->begin(),
-//                                                           right_result_tiles_.back()->end()));
       set.container_ = std::unordered_set<oid_t>(right_result_tiles_.back()->begin(),
                                                            right_result_tiles_.back()->end());
 
       exhj_no_matching_right_row_sets_.emplace_back(std::move(set));
-
-
-//      assert(right_result_tiles_.size() - no_matching_right_row_sets_.size() == 1);
-//      exhj_no_matching_right_row_sets_.emplace_back(right_result_tiles_.back()->begin(),
-//                                               right_result_tiles_.back()->end());
     }
 
 
