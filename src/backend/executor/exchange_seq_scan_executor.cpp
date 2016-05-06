@@ -22,7 +22,6 @@
 #include "backend/common/thread_manager.h"
 #include "backend/planner/seq_scan_plan.h"
 
-
 namespace peloton {
 namespace executor {
 bool ExchangeSeqScanExecutor::DInit() {
@@ -112,7 +111,6 @@ bool ExchangeSeqScanExecutor::DExecute() {
 void ExchangeSeqScanExecutor::ScanOneTileGroup(const oid_t no, concurrency::Transaction *transaction) {
   concurrency::current_txn = transaction;
   auto tile_group = target_table_->GetTileGroup(no);
-  auto tile_group_header = tile_group->GetHeader();
   oid_t active_tuple_count = tile_group->GetNextTupleSlot();
 
   // Construct position list by looping through tile group

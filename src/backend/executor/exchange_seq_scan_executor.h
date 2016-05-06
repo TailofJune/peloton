@@ -42,6 +42,7 @@ class ExchangeSeqScanExecutor: public AbstractExecutor {
 
   // whether we have finished scan
   bool done_ = false;
+  // lock to protect result_ and finished_number_
   std::mutex result_lock_;
   std::condition_variable cv_;
   std::queue<LogicalTile *> result_;

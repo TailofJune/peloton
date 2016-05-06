@@ -318,7 +318,7 @@ executor::AbstractExecutor *BuildExecutorTree(
    * Whether we want to enable intra-operator parallelism
    * Should have been made configurable in a configure file
    */
-  static const parallel_mode = false;
+  static const bool parallel_mode = false;
   // Base case
   if (plan == nullptr) return root;
 
@@ -376,8 +376,8 @@ executor::AbstractExecutor *BuildExecutorTree(
     case PLAN_NODE_TYPE_HASHJOIN:
       if(!parallel_mode)
         child_executor = new executor::HashJoinExecutor(plan, executor_context);
-      else
-        child_executor = new executor::ExchangeHashJoinExecutor(plan, executor_context);
+      //else
+      //  child_executor = new executor::ExchangeHashJoinExecutor(plan, executor_context);
       break;
 
     case PLAN_NODE_TYPE_PROJECTION:

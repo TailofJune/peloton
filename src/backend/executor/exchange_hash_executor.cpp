@@ -4,12 +4,6 @@
 
 #include "backend/planner/exchange_hash_plan.h"
 #include "backend/executor/exchange_hash_executor.h"
-#include "backend/common/logger.h"
-#include "backend/common/value.h"
-#include "backend/common/barrier.h"
-#include "backend/executor/logical_tile.h"
-#include "backend/executor/hash_executor.h"
-#include "backend/planner/hash_plan.h"
 #include "backend/expression/tuple_value_expression.h"
 
 namespace peloton {
@@ -97,9 +91,8 @@ bool ExchangeHashExecutor::DExecute() {
       auto tile = children_[0]->GetOutput();
       child_tiles_.push_back(tile);
     }
-
+    EnsureTableSize();
     Barrier barrier(child_tiles_.size());
-    size_t child_tile_iter = 0;
     for(size_t no = 0; no<child_tiles_.size(); ++no) {
       std::function<void()> f_build_hash_table = std::bind(&ExchangeHashExecutor::BuildHashTableThreadMain, this,
                                                            child_tiles_[no], no, &barrier);
