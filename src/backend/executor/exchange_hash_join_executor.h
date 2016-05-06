@@ -16,6 +16,7 @@
 // #include "backend/executor/abstract_exchange_executor.h"
 
 #include "backend/common/thread_manager.h"
+#include "backend/common/barrier.h"
 #include "boost/lockfree/queue.hpp"
 #include <atomic>
 
@@ -58,17 +59,10 @@ namespace peloton {
       // empty
     };
 
-
+/*
     typedef std::uint_least32_t thread_no;
-    /*
-     * A Barrier is used to synchronize a coordinator thread
-     * with multiple worker threads.
-     * A worker thread calls Release() when its work is done.
-     * The coordinator thread calls Wait on a barrier.
-     * When the Wait returns, it knows all the worker threads have
-     * finished their jobs.
-     */
-    class ExBarrier {
+
+      class ExBarrier {
     public:
       thread_no total_;
       ExBarrier(thread_no total): total_(total) { }
@@ -93,7 +87,7 @@ namespace peloton {
       std::condition_variable cv_;
       size_t count_ = 0;
     };
-
+*/
     class PesudoBarrier{
     public:
       void Release() {
@@ -147,8 +141,8 @@ namespace peloton {
       ~ExchangeHashJoinExecutor() = default;
 
       void ProbeThreadMain(LogicalTile * tile, size_t curt_left_result_tiles_idx);
-      void GetRightHashTable(ExBarrier * barrier);
-      void GetLeftScanResult(ExBarrier * barrier);
+      void GetRightHashTable(Barrier * barrier);
+      void GetLeftScanResult(Barrier * barrier);
 
 //      void Probe(std::atomic<thread_no> *no, Barrier *barrier) ;
       void Probe(std::atomic<thread_no> *no, PesudoBarrier *barrier) ;

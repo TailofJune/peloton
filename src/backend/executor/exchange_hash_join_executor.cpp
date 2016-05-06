@@ -68,7 +68,7 @@ namespace executor {
     }
 
 
-    void ExchangeHashJoinExecutor::GetRightHashTable(ExBarrier * barrier){
+    void ExchangeHashJoinExecutor::GetRightHashTable(Barrier * barrier){
 
       const auto start = std::chrono::system_clock::now();
 
@@ -90,7 +90,7 @@ namespace executor {
 
     }
 
-    void ExchangeHashJoinExecutor::GetLeftScanResult(ExBarrier * barrier){
+    void ExchangeHashJoinExecutor::GetLeftScanResult(Barrier * barrier){
 
       const auto start = std::chrono::system_clock::now();
       printf("Build Left Child Scan Task picked up \n");
@@ -264,14 +264,14 @@ namespace executor {
         // Here takes option1.
         if (prepare_children_ == false) {
           // build right hashTable
-          ExBarrier build_hashtable_barrier(1);
+          Barrier build_hashtable_barrier(1);
           std::function<void()> build_hashtable_worker =
             std::bind(&ExchangeHashJoinExecutor::GetRightHashTable, this, &build_hashtable_barrier);
           LaunchWorkerThreads(1, build_hashtable_worker);
           printf("Wait for right child build to finish.\n");
 
           // collect all left children
-          ExBarrier collect_scan_result_barrier(1);
+          Barrier collect_scan_result_barrier(1);
           std::function<void()> collect_scan_result_worker =
             std::bind(&ExchangeHashJoinExecutor::GetLeftScanResult, this, &collect_scan_result_barrier);
           LaunchWorkerThreads(1, collect_scan_result_worker);
