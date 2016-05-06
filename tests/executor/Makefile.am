@@ -5,8 +5,8 @@
 ######################################################################
 
 check_PROGRAMS += \
-					exchange_seq_scan_test \
-					exchange_hash_test \
+				  exchange_seq_scan_test \
+				  exchange_hash_test \
 				  logical_tile_test \
 				  mutate_test \
 				  materialization_test \
@@ -81,4 +81,11 @@ tile_group_layout_test_SOURCES = \
 loader_test_SOURCES = \
 					$(executor_tests_common) \
 					executor/loader_test.cpp
-								 
+
+exchange_seq_scan_test_SOURCES = \
+                    $(executor_tests_common) \
+                    executor/exchange_seq_scan_test.cpp
+
+exchange_hash_test_SOURCES = \
+                    $(executor_tests_common) \
+                    executor/exchange_hash_test.cpp
