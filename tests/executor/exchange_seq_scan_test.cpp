@@ -213,13 +213,13 @@ double GetRunTime(executor::ExchangeSeqScanExecutor &executor, std::vector<execu
   return ms;
 }
 
-double GetRunTime(executor::SeqScanExecutor &executor, std::vector<executor::LogicalTile *> *result) {
+double GetRunTime(executor::SeqScanExecutor &executor, std::vector<std::unique_ptr<executor::LogicalTile>> *result) {
   const auto start = std::chrono::system_clock::now();
   EXPECT_TRUE(executor.Init());
   while(executor.Execute()) {
     executor::LogicalTile *temp = executor.GetOutput();
     if(result)
-      result->push_back(temp);
+      result->emplace_back(temp);
   }
   const auto end = std::chrono::system_clock::now();
   const std::chrono::duration<double> diff = end-start;
@@ -293,9 +293,12 @@ TEST_F(ParallelSeqScanTests, LeafNodeCorrectnessTest) {
     EXPECT_EQ(0, expected_tuples_left.size());
   }
 
+  for(auto tile: result)
+    delete tile;
   txn_manager.CommitTransaction();
 }
 
+/*
 TEST_F(ParallelSeqScanTests, LeafNodeSpeedTest) {
   constexpr size_t tile_num = 100000;
   constexpr size_t row_num = 1000;
@@ -303,24 +306,6 @@ TEST_F(ParallelSeqScanTests, LeafNodeSpeedTest) {
   std::unique_ptr<storage::DataTable> table(CreateTable(tile_num, row_num));
 
   LOG_INFO("CreateTable done");
-
-  // Sequential version
-  {
-    std::vector<oid_t> column_ids({0, 1, 3});
-    auto &txn_manager = concurrency::TransactionManagerFactory::GetInstance();
-
-    // Single thread version
-    planner::SeqScanPlan node2(table.get(), CreatePredicate(g_tuple_ids),
-                               column_ids);
-    auto txn2 = txn_manager.BeginTransaction();
-    std::unique_ptr<executor::ExecutorContext> context2(
-            new executor::ExecutorContext(txn2));
-    executor::SeqScanExecutor executor2(&node2, context2.get());
-    std::vector<executor::LogicalTile *> result2;
-    double duration2 = GetRunTime(executor2, &result2);
-    txn_manager.CommitTransaction();
-    LOG_INFO("single thread: %lf ms", duration2);
-  }
 
   // Parallel version
   for(int i=0; i<10; ++i) {
@@ -342,7 +327,25 @@ TEST_F(ParallelSeqScanTests, LeafNodeSpeedTest) {
     txn_manager.CommitTransaction();
     LOG_INFO("parallel: %lf ms", duration1);
   }
-}
 
+  // Sequential version
+  {
+    std::vector<oid_t> column_ids({0, 1, 3});
+    auto &txn_manager = concurrency::TransactionManagerFactory::GetInstance();
+
+    // Single thread version
+    planner::SeqScanPlan node2(table.get(), CreatePredicate(g_tuple_ids),
+                               column_ids);
+    auto txn2 = txn_manager.BeginTransaction();
+    std::unique_ptr<executor::ExecutorContext> context2(
+            new executor::ExecutorContext(txn2));
+    executor::SeqScanExecutor executor2(&node2, context2.get());
+    std::vector<std::unique_ptr<executor::LogicalTile>> result2;
+    double duration2 = GetRunTime(executor2, &result2);
+    txn_manager.CommitTransaction();
+    LOG_INFO("single thread: %lf ms", duration2);
+  }
+}
+*/
 }
 }

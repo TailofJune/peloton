@@ -169,8 +169,8 @@ void ExpectNormalTileResults(
 }
 
 TEST_F(ParallelHashExecutorTests, CorrectnessTest) {
-  constexpr size_t tile_num = 300;
-  constexpr size_t row_num = 1000;
+  constexpr size_t tile_num = 30;
+  constexpr size_t row_num = 100;
 
   constexpr size_t right_table_tile_group_count = tile_num;
 
@@ -293,6 +293,7 @@ TEST_F(ParallelHashExecutorTests, CorrectnessTest) {
   }
 }
 
+/*
 TEST_F(ParallelHashExecutorTests, SpeedTest) {
   constexpr size_t tile_num = 3000;
   constexpr size_t row_num = 10000;
@@ -405,6 +406,7 @@ TEST_F(ParallelHashExecutorTests, SpeedTest) {
     LOG_INFO("ParallelHashExecutor execution time: %lf ms", ms);
   }
 }
+ */
 }
 }
 
