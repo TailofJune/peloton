@@ -6,6 +6,7 @@
 
 executor_FILES = \
          backend/executor/exchange_seq_scan_executor.cpp \
+         backend/executor/exchange_hash_join_executor.cpp \
          backend/executor/exchange_hash_executor.cpp \
 		 backend/executor/abstract_executor.cpp \
 		 backend/executor/abstract_join_executor.cpp \

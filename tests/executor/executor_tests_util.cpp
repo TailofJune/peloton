@@ -210,6 +210,84 @@ void ExecutorTestsUtil::PopulateTable(storage::DataTable *table, int num_rows,
   }
 }
 
+
+
+/**
+ * @brief Populates the table for ParallelTest
+ * @param table Table to populate with values.
+ * @param num_rows Number of tuples to insert.
+ */
+void ExecutorTestsUtil::PopulateTableForParallelTest(
+                                      storage::DataTable *table, int num_rows,
+                                      bool left) {
+
+  const catalog::Schema *schema = table->GetSchema();
+
+  // Ensure that the tile group is as expected.
+  assert(schema->GetColumnCount() == 4);
+
+  // Insert tuples into tile_group.
+  const bool allocate = true;
+  auto testing_pool = TestingHarness::GetInstance().GetTestingPool();
+
+  for (int rowid = 0; rowid < num_rows; rowid++) {
+    int populate_value = rowid;
+
+    storage::Tuple tuple(schema, allocate);
+
+    tuple.SetValue(
+        0, ValueFactory::GetIntegerValue(PopulatedValue(populate_value, 0)),
+        testing_pool);
+
+//    if (populate_value % 5 == 0){
+//      if (populate_value % 15 == 0){
+//        tuple.SetValue(
+//          1, ValueFactory::GetIntegerValue(PopulatedValue(populate_value, left?2:1)),
+//              testing_pool);
+//       }else {
+//        tuple.SetValue(
+//          1, ValueFactory::GetIntegerValue(PopulatedValue(populate_value, left?1:2)),
+//              testing_pool);
+//       }
+//    } else {
+      tuple.SetValue(
+        1, ValueFactory::GetIntegerValue(PopulatedValue(populate_value, 1)),
+            testing_pool);
+//    }
+    if ((populate_value % 10 == 0 || (populate_value-1) % 10 == 0)
+          && left){
+     tuple.SetValue(
+       1, ValueFactory::GetIntegerValue(11),
+         testing_pool);
+    }
+    if (populate_value < 3 && !left){
+      tuple.SetValue(
+        1, ValueFactory::GetIntegerValue(11),
+          testing_pool);
+    }
+    if (populate_value == 4 && !left){
+      tuple.SetValue(
+        1, ValueFactory::GetIntegerValue(19),
+          testing_pool);
+    }
+
+    tuple.SetValue(2, ValueFactory::GetDoubleValue(PopulatedValue(
+        populate_value, 2)), testing_pool);
+
+    Value string_value =
+        ValueFactory::GetStringValue(std::to_string(PopulatedValue(
+          populate_value, 3)));
+    tuple.SetValue(3, string_value, testing_pool);
+
+    ItemPointer tuple_slot_id = table->InsertTuple(&tuple);
+    EXPECT_TRUE(tuple_slot_id.block != INVALID_OID);
+    EXPECT_TRUE(tuple_slot_id.offset != INVALID_OID);
+    auto &txn_manager = concurrency::TransactionManagerFactory::GetInstance();
+    txn_manager.PerformInsert(tuple_slot_id);
+  }
+}
+
+
 /**
  * @brief  Populates the tiles in the given tile-group in a specific manner.
  * @param tile_group Tile-group to populate with values.

@@ -6,6 +6,7 @@
 
 check_PROGRAMS += \
 				  exchange_seq_scan_test \
+				  exchange_hash_join_test \
 				  exchange_hash_test \
 				  logical_tile_test \
 				  mutate_test \
@@ -27,28 +28,28 @@ executor_tests_common= 	executor/executor_tests_util.cpp \
 
 logical_tile_test_SOURCES = \
 							$(executor_tests_common) \
-							executor/logical_tile_test.cpp 
+							executor/logical_tile_test.cpp
 
 materialization_test_SOURCES = \
 							   $(executor_tests_common) \
-							   executor/materialization_test.cpp 
+							   executor/materialization_test.cpp
 
 mutate_test_SOURCES = \
 					  $(executor_tests_common) \
-					  executor/mutate_test.cpp 
+					  executor/mutate_test.cpp
 
 seq_scan_test_SOURCES = \
 						$(executor_tests_common) \
-						executor/seq_scan_test.cpp 
+						executor/seq_scan_test.cpp
 
 index_scan_test_SOURCES = \
 						  $(executor_tests_common) \
-						  executor/index_scan_test.cpp 
+						  executor/index_scan_test.cpp
 
 limit_test_SOURCES = \
 					 $(executor_tests_common) \
 					 executor/limit_test.cpp
-								
+
 join_test_SOURCES = \
 						$(executor_tests_common) \
 						executor/join_test.cpp \
@@ -56,24 +57,24 @@ join_test_SOURCES = \
 
 order_by_test_SOURCES = \
 						$(executor_tests_common) \
-						executor/order_by_test.cpp 
-					
+						executor/order_by_test.cpp
+
 hash_set_op_test_SOURCES = \
 						$(executor_tests_common) \
 						executor/hash_set_op_test.cpp
-						
+
 aggregate_test_SOURCES = \
 						$(executor_tests_common) \
-						executor/aggregate_test.cpp 
-					
+						executor/aggregate_test.cpp
+
 append_test_SOURCES = \
 					$(executor_tests_common) \
-					executor/append_test.cpp					
+					executor/append_test.cpp
 
 projection_test_SOURCES = \
 					$(executor_tests_common) \
-					executor/projection_test.cpp					
-					
+					executor/projection_test.cpp
+
 tile_group_layout_test_SOURCES = \
 								 $(executor_tests_common) \
 								 executor/tile_group_layout_test.cpp
@@ -89,3 +90,8 @@ exchange_seq_scan_test_SOURCES = \
 exchange_hash_test_SOURCES = \
                     $(executor_tests_common) \
                     executor/exchange_hash_test.cpp
+
+exchange_hash_join_test_SOURCES = \
+					$(executor_tests_common) \
+						executor/exchange_hash_join_test.cpp \
+						executor/join_tests_util.cpp
