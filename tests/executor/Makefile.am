@@ -5,6 +5,8 @@
 ######################################################################
 
 check_PROGRAMS += \
+					exchange_seq_scan_test \
+					exchange_hash_test \
 				  logical_tile_test \
 				  mutate_test \
 				  materialization_test \
