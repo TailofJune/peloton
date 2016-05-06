@@ -73,7 +73,7 @@ bool ExchangeSeqScanExecutor::DExecute() {
         if(0==tile->GetTupleCount()) {  // Avoid returning empty tiles
           continue;
         }
-        result_.push(tile.release());
+        result_.emplace(tile.release());
       }
     }
       // Scanning a table
@@ -106,7 +106,7 @@ bool ExchangeSeqScanExecutor::DExecute() {
   assert(finished_number_==tile_group_number_);
   if(result_.empty())
     return false;
-  SetOutput(result_.front());
+  SetOutput(result_.front().replease());
   result_.pop();
   return true;
 }
