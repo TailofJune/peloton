@@ -48,6 +48,8 @@ namespace peloton {
 
     };
 
+    typedef std::uint_least32_t thread_no;
+
     class PesudoBarrier{
     public:
       void Release() {
