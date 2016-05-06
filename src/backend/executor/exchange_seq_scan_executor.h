@@ -44,8 +44,10 @@ class ExchangeSeqScanExecutor: public AbstractExecutor {
   bool done_ = false;
   // lock to protect result_ and finished_number_
   std::mutex result_lock_;
+  // coordinate thread waits on this variable, wait for all tasks to finish
   std::condition_variable cv_;
   std::queue<LogicalTile *> result_;
+  // total number of tile groups which is also the total number of tasks
   oid_t tile_group_number_ = 0;
   oid_t finished_number_ = 0;
 };

@@ -295,8 +295,8 @@ TEST_F(ExchangeHashExecutorTests, CorrectnessTest) {
 
 
 TEST_F(ExchangeHashExecutorTests, SpeedTest) {
-  constexpr size_t tile_num = 3000;
-  constexpr size_t row_num = 10000;
+  constexpr size_t tile_num = 30000;
+  constexpr size_t row_num = 1000;
 
   // Create table.
   std::unique_ptr<storage::DataTable> right_table(CreateTable(tile_num, row_num));
@@ -355,6 +355,7 @@ TEST_F(ExchangeHashExecutorTests, SpeedTest) {
   }
 
   // Parallel version
+  double time = 0;
   for(int i=0; i<10; ++i) {
     LOG_INFO("iteration %d", i+1);
     MockExecutor right_table_scan_executor;
@@ -403,8 +404,10 @@ TEST_F(ExchangeHashExecutorTests, SpeedTest) {
     const auto end = std::chrono::system_clock::now();
     const std::chrono::duration<double> diff = end-start;
     const double ms = diff.count()*1000;
+    time += ms;
     LOG_INFO("ExchangeHashExecutor execution time: %lf ms", ms);
   }
+  LOG_INFO("ExchangeHashExecutor average time: %lf ms", time/10);
 }
 
 }
