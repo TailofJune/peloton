@@ -20,6 +20,8 @@
 #include "backend/common/lockfree_queue.h"
 #include "boost/lockfree/queue.hpp"
 #include <atomic>
+#include <chrono>
+#include <thread>
 
 namespace peloton {
   namespace executor {

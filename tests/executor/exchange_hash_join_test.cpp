@@ -275,8 +275,8 @@ namespace peloton {
       } else if (join_test_type == LEFT_TABLE_EMPTY) {
         ExpectEmptyTileResult(&left_table_scan_executor);
       } else if (join_test_type == RIGHT_TABLE_EMPTY) {
-    if (join_type == JOIN_TYPE_INNER || join_type == JOIN_TYPE_RIGHT) {
-      //  if ((join_type == JOIN_TYPE_INNER || join_type == JOIN_TYPE_RIGHT) && (join_algorithm != PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN))  {
+    // if (join_type == JOIN_TYPE_INNER || join_type == JOIN_TYPE_RIGHT) {
+       if ((join_type == JOIN_TYPE_INNER || join_type == JOIN_TYPE_RIGHT) && (join_algorithm != PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN))  {
           ExpectMoreThanOneTileResults(&left_table_scan_executor,
                                        left_table_logical_tile_ptrs);
         } else {
@@ -785,7 +785,7 @@ for (auto join_algorithm : join_algorithms) {
 }
 }
 
-/*
+
 TEST_F(ExchangeHashJoinTests, EmptyTablesTest) {
 // Go over all join algorithms
   BuildTestTableUtil join_test;
@@ -892,6 +892,7 @@ TEST_F(ExchangeHashJoinTests, JoinPredicateTest) {
   }
 }
 
+/*
 TEST_F(ExchangeHashJoinTests, LargeTableCorrectnessTest) {
   // Go over all join algorithms
   BuildTestTableUtil join_test;

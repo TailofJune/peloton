@@ -321,13 +321,13 @@ namespace executor {
           std::function<void()> probe_worker =
             std::bind(&ExchangeHashJoinExecutor::Probe, this,
                       &no, &probe_barrier_);
-//        LaunchWorkerThreads(partition_number - 1, probe_worker);
+      //  LaunchWorkerThreads(partition_number - 1, probe_worker);
           LaunchWorkerThreads(partition_number, probe_worker);
 
 
           // here main thread also pariticipate in doing sub tasks.
           // todo: consider alternatives: main thread push result on by on
-//        Probe(&no, &probe_barrier);
+      //  Probe(&no, &probe_barrier_);
 
 //          probe_barrier.Wait();
           prepare_children_ = true;
@@ -357,7 +357,9 @@ namespace executor {
 //          if (no_need_to_probe_ == false &&
           if (probe_barrier_.IsNoNeedToDo() == false &&
               probe_barrier_.IsDone() == false){
-              LOG_INFO("Launch Finish\n");
+              // LOG_INFO("Launch Finish\n");
+              std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
               // printf("launch finish... .\n");
               continue;
           }
