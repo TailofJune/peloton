@@ -6,7 +6,7 @@ The way we do this is like this:
  3) Combine results from multiple sub-tasks
  4) Maintain the same interface (GetOutput) as other executors so that exchange executors can be combined with normal executors
 
-2. Relevant files]
+2. Relevant files
  Modified:
   backend/bridge/dml/executor/plan_executor.cpp
   src/backend/executor/Makefile.am
