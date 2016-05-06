@@ -16,7 +16,6 @@
 namespace peloton {
 namespace executor {
 
-typedef std::uint_least32_t thread_no;
 /*
  * A Barrier is used to synchronize a coordinator thread
  * with multiple worker threads.
@@ -27,6 +26,7 @@ typedef std::uint_least32_t thread_no;
  */
 class Barrier {
  public:
+  typedef std::uint_least32_t thread_no;
   Barrier(thread_no total): total_(total) { }
   void Release() {
     std::lock_guard<std::mutex> lock(mutex_);

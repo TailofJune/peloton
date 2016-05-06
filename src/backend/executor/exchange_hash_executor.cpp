@@ -57,7 +57,7 @@ void ExchangeHashExecutor::BuildHashTableThreadMain(LogicalTile *tile, size_t ch
       });
 
       // There is no way second update fail.
-      // assert(ok == true);
+      assert(ok == true);
     }
   }
 
@@ -98,7 +98,7 @@ bool ExchangeHashExecutor::DExecute() {
       child_tiles_.emplace_back(tile);
     }
     EnsureTableSize(tuple_count);
-    Barrier barrier((thread_no)child_tiles_.size());
+    Barrier barrier((Barrier::thread_no)child_tiles_.size());
     for(size_t no = 0; no<child_tiles_.size(); ++no) {
       std::function<void()> f_build_hash_table = std::bind(&ExchangeHashExecutor::BuildHashTableThreadMain, this,
                                                            child_tiles_[no].get(), no, &barrier);

@@ -73,7 +73,7 @@ bool ExchangeSeqScanExecutor::DExecute() {
         if(0==tile->GetTupleCount()) {  // Avoid returning empty tiles
           continue;
         }
-        result_.push(tile.release());
+        result_.emplace(tile.release());
       }
     }
       // Scanning a table
@@ -86,10 +86,11 @@ bool ExchangeSeqScanExecutor::DExecute() {
 
       // In this case, wrap the scanning of each tile group into an individual task
       // Break the whole execution into multiple tasks
-      for(oid_t no=0; no<tile_group_number_; ++no)
+      for(oid_t no=0; no<tile_group_number_; ++no) {
         ThreadManager::GetInstance().AddTask(
                 std::bind(&ExchangeSeqScanExecutor::ScanOneTileGroup, this,
                           no, concurrency::current_txn));
+      }
       {
         // Wait for all tasks to be done
         std::unique_lock<std::mutex> lock(result_lock_);
@@ -105,7 +106,7 @@ bool ExchangeSeqScanExecutor::DExecute() {
   assert(finished_number_==tile_group_number_);
   if(result_.empty())
     return false;
-  SetOutput(result_.front());
+  SetOutput(result_.front().release());
   result_.pop();
   return true;
 }
@@ -160,7 +161,7 @@ void ExchangeSeqScanExecutor::ScanOneTileGroup(const oid_t no, concurrency::Tran
       LogicalTile *logical_tile = LogicalTileFactory::GetTile();
       logical_tile->AddColumns(tile_group, column_ids_);
       logical_tile->AddPositionList(std::move(position_list));
-      result_.push(logical_tile);
+      result_.emplace(logical_tile);
     }
 
     ++finished_number_;

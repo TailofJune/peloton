@@ -246,7 +246,6 @@ TEST_F(ExchangeSeqScanTests, LeafNodeCorrectnessTest) {
           new executor::ExecutorContext(txn));
 
   executor::ExchangeSeqScanExecutor executor(&node, context.get());
-  //executor::SeqScanExecutor executor(&node, context.get());
   std::vector<executor::LogicalTile *> result;
   GetRunTime(executor, &result);
 
