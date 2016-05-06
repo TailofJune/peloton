@@ -58,11 +58,11 @@ bool ExchangeSeqScanExecutor::DExecute() {
       assert(column_ids_.size()==0);
       // In this case, just use sequential scan executor
       while(children_[0]->Execute()) {
-        LogicalTile *tile(children_[0]->GetOutput());
+        std::unique_ptr<LogicalTile> tile(children_[0]->GetOutput());
         if(predicate_!=nullptr) {
           // Invalidate tuples that don't satisfy the predicate.
           for(oid_t tuple_id : *tile) {
-            expression::ContainerTuple<LogicalTile> tuple(tile, tuple_id);
+            expression::ContainerTuple<LogicalTile> tuple(tile.get(), tuple_id);
             if(predicate_->Evaluate(&tuple, nullptr, executor_context_)
                     .IsFalse()) {
               tile->RemoveVisibility(tuple_id);
@@ -72,7 +72,7 @@ bool ExchangeSeqScanExecutor::DExecute() {
         if(0==tile->GetTupleCount()) {  // Avoid returning empty tiles
           continue;
         }
-        result_.push(tile);
+        result_.push(tile.release());
       }
     }
       // Scanning a table

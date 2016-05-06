@@ -120,9 +120,6 @@ storage::DataTable *CreateTable(size_t tile_group_num, size_t row_num) {
     ExecutorTestsUtil::PopulateTiles(table->GetTileGroup(index++), row_num);
   }
 
-  LOG_INFO("index=%u tile group number=%lu",
-           (unsigned)(index-1),
-           (unsigned long)table->GetTileGroupCount());
   return table.release();
 }
 
@@ -136,7 +133,6 @@ storage::DataTable *CreateTable(size_t tile_group_num, size_t row_num, bool) {
           ExecutorTestsUtil::CreateTable(row_num, false));
   TestingHarness::GetInstance().GetNextTileGroupId();
   size_t index = 0;
-  LOG_INFO("start tile group number=%lu", (unsigned long)table->GetTileGroupCount());
   ExecutorTestsUtil::PopulateTiles(table->GetTileGroup(index++), row_num);
   for(size_t i=0; i<tile_group_num-1; ++i) {
     std::vector<catalog::Schema> schemas1(
