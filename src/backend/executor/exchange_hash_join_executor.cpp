@@ -62,48 +62,41 @@ namespace executor {
 
       const auto end = std::chrono::system_clock::now();
       const std::chrono::duration<double> diff = end-start;
-      const double ms = diff.count()*1000;
-      printf("Get Right Hash Table takes %lf ms\n", ms);
+      LOG_INFO("Get Right Hash Table takes %lf ms\n", diff.count()*1000);
 
     }
 
     void ExchangeHashJoinExecutor::GetLeftScanResult(Barrier * barrier){
 
       const auto start = std::chrono::system_clock::now();
-      printf("Build Left Child Scan Task picked up \n");
+      LOG_INFO("Build Left Child Scan Task picked up \n");
       while(children_[0]->Execute()){
         BufferLeftTile(children_[0]->GetOutput());
       }
-      printf("Get Left Child Done. \n");
+      LOG_INFO("Get Left Child Done. \n");
       if (left_result_tiles_.size() == 0){
-        printf("left child size: %lu\n", left_result_tiles_.size());
+        LOG_INFO("left child size: %lu\n", left_result_tiles_.size());
       }else {
-        printf("left_result_tiles.size():%lu, tuple num per tile:%lu\n", left_result_tiles_.size(), left_result_tiles_.back().get()->GetTupleCount());
+        LOG_INFO("left_result_tiles.size():%lu, tuple num per tile:%lu\n", left_result_tiles_.size(), left_result_tiles_.back().get()->GetTupleCount());
       }
       barrier->Release();
       const auto end = std::chrono::system_clock::now();
       const std::chrono::duration<double> diff = end-start;
       const double ms = diff.count()*1000;
-      printf("Get Left Scan takes %lf ms\n", ms);
+      LOG_INFO("Get Left Scan takes %lf ms\n", ms);
     }
 
 
     void ExchangeHashJoinExecutor::Probe(std::atomic<thread_no> *no,
                                          PesudoBarrier *barrier) {
 
-      printf("Probe Task picked up \n");
+      LOG_INFO("Probe Task picked up \n");
       const auto start = std::chrono::system_clock::now();
 
       const thread_no self_no = (*no)++;
       const size_t begin_idx = self_no * SIZE_PER_PARTITION;
       const size_t end_idx = std::min(begin_idx + SIZE_PER_PARTITION,  left_result_tiles_.size());
 
-      // todo: in this case, this algorithm is still parallel. Because, only the number of
-      // calling this function.
-
-//      LOG_INFO("Probe Task picked up \n");
-//      printf("Probe Task picked up \n");
-//      printf("GetTupleCount: %lu\n", left_result_tiles_.back()->GetTupleCount());
 
       auto &hash_table = hash_executor_->GetHashTable();
       auto &hashed_col_ids = hash_executor_->GetHashKeyIds();
@@ -145,19 +138,6 @@ namespace executor {
                         left_tile, left_tile_itr);
 
             for (auto &location : right_tuples) {
-
-              /*-------For testing cuckoo hashing -----------------------------*/
-
-              /*
-              LogicalTile *right_tmp_tile = right_result_tiles_[location.first].get();
-              const expression::ContainerTuple<executor::LogicalTile> right_tuple(
-                right_tmp_tile, location.second);
-
-              int left_tuple_join_attribute_val = left_tuple_test.GetValue(1).GetIntegerForTestsOnly();
-              int right_tuple_join_attribute_val = right_tuple.GetValue(1).GetIntegerForTestsOnly();
-              printf("testing 22222 --------- left value: %d, right value: %d\n", left_tuple_join_attribute_val, right_tuple_join_attribute_val);
-              */
-              /*-------For testing cuckoo hashing -----------------------------*/
 
               // Check if we got a new right tile itr
               if (prev_tile != location.first) {
@@ -207,7 +187,7 @@ namespace executor {
       const auto end = std::chrono::system_clock::now();
       const std::chrono::duration<double> diff = end-start;
       const double ms = diff.count()*1000;
-      printf("Probe thread %u takes %lf ms\n", (unsigned)self_no, ms);
+      LOG_INFO("Probe thread %u takes %lf ms\n", (unsigned)self_no, ms);
 
       LOG_TRACE("Probe() thread %u done", (unsigned)self_no);
       barrier->Release();
@@ -248,18 +228,18 @@ namespace executor {
           std::function<void()> build_hashtable_worker =
             std::bind(&ExchangeHashJoinExecutor::GetRightHashTable, this, &build_hashtable_barrier);
           LaunchWorkerThreads(1, build_hashtable_worker);
-          printf("Wait for right child build to finish.\n");
+          LOG_INFO("Wait for right child build to finish.\n");
 
           // collect all left children
           Barrier collect_scan_result_barrier(1);
           std::function<void()> collect_scan_result_worker =
             std::bind(&ExchangeHashJoinExecutor::GetLeftScanResult, this, &collect_scan_result_barrier);
           LaunchWorkerThreads(1, collect_scan_result_worker);
-          printf("Wait for left child scan to finish.\n");
+          LOG_INFO("Wait for left child scan to finish.\n");
 
           build_hashtable_barrier.Wait();
           collect_scan_result_barrier.Wait();
-          printf("Ready to Probe.\n");
+          LOG_INFO("Ready to Probe.\n");
 
           // todo: How can I do that:
           // Once I find right_child is empty, stop collect left children.
@@ -288,7 +268,7 @@ namespace executor {
           if (left_child_size % SIZE_PER_PARTITION != 0) {
             ++partition_number;
           }
-          printf("left_result_tiles.size():%lu, partition num in probe:%lu\n", left_child_size, partition_number);
+          LOG_INFO("left_result_tiles.size():%lu, partition num in probe:%lu\n", left_child_size, partition_number);
 
 
           // sub tasks begin
@@ -321,29 +301,17 @@ namespace executor {
           return true;
         }
 
-      /*
-        if (lockfree_buffered_output_tiles.empty() == false) {
-          LogicalTile *output_tile = nullptr;
-//          bool ret = lockfree_buffered_output_tiles.pop(output_tile);
-//          assert(ret);
-          lockfree_buffered_output_tiles.pop(output_tile);
-          SetOutput(output_tile);
-          return true;
-        } */
         else {
-//          if (no_need_to_probe_ == false &&
           if (probe_barrier_.IsNoNeedToDo() == false &&
               probe_barrier_.IsDone() == false){
-              // LOG_INFO("Launch Finish\n");
               std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
-              // printf("launch finish... .\n");
               continue;
           }
           main_end = std::chrono::system_clock::now();
           const std::chrono::duration<double> diff = main_end - main_start;
           const double ms = diff.count()*1000;
-          printf("Inner part takes %lf ms \n", ms);
+          LOG_INFO("Inner part takes %lf ms \n", ms);
 
           if (BuildOuterJoinOutput()){
             continue;
@@ -361,17 +329,13 @@ namespace executor {
 
     //todo: 1. parallel real outer join (not empty right child)
     bool ExchangeHashJoinExecutor::BuildLeftJoinOutput() {
-      printf("ExchangeHashJoinExecutor::BuildLeftJoinOutput called.\n");
+      LOG_INFO("ExchangeHashJoinExecutor::BuildLeftJoinOutput called.\n");
       auto curt_left_matching_idx = atomic_left_matching_idx.fetch_add(0);
-//      printf("curt_left_matching_idx : %lu\n", curt_left_matching_idx);
       while (curt_left_matching_idx  < no_matching_left_row_sets_.size()) {
         if (no_matching_left_row_sets_[curt_left_matching_idx].empty()) {
-//          printf("curt_left_matching_idx : %lu is empty\n", curt_left_matching_idx);
           curt_left_matching_idx = atomic_left_matching_idx.fetch_add(1) + 1;
-//          printf("curt_left_matching_idx : %lu\n", curt_left_matching_idx);
           continue;
         }
-//        printf("availble curt_left_matching_idx : %lu\n", curt_left_matching_idx);
 
         std::unique_ptr<LogicalTile> output_tile(nullptr);
         auto left_tile = left_result_tiles_[curt_left_matching_idx ].get();
@@ -414,9 +378,7 @@ namespace executor {
  */
     //todo: parallel real outer join (not empty right child)
     bool ExchangeHashJoinExecutor::BuildRightJoinOutput() {
-//      printf("ExchangeHashJoinExecutor::BuildRightJoinOutput called.\n");
       auto curt_right_matching_idx = atomic_right_matching_idx.fetch_add(0);
-//      printf("curt_right_matching_idx :%lu, exhj_no_matching_right_row_sets_: %lu\n", curt_right_matching_idx, exhj_no_matching_right_row_sets_.size());
       while (curt_right_matching_idx  < exhj_no_matching_right_row_sets_.size()) {
         if (exhj_no_matching_right_row_sets_[curt_right_matching_idx ].Empty()) {
           curt_right_matching_idx = atomic_right_matching_idx.fetch_add(1);
@@ -455,7 +417,7 @@ namespace executor {
         atomic_right_matching_idx.fetch_add(1);
         return true;
       }
-      printf("ExchangeHashJoinExecutor::BuildRightJoinOutput return false.\n");
+      LOG_INFO("ExchangeHashJoinExecutor::BuildRightJoinOutput return false.\n");
       return false;
     }
 

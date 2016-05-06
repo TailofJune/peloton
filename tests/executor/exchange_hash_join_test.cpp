@@ -52,8 +52,10 @@ namespace peloton {
     class ExchangeHashJoinTests : public PelotonTest {
     };
 
+
     class BuildTestTableUtil{
       public:
+
       void ExecuteJoinTest(PlanNodeType join_algorithm, PelotonJoinType join_type,
                            oid_t join_test_type, bool set_workload = false,
                             size_t workload = 150);
@@ -67,7 +69,7 @@ namespace peloton {
         left_table_tile_group_count = left_group_num;
         right_table_tile_group_count = right_group_num;
 
-        printf("CreateTestTable...\n");
+        LOG_INFO("CreateTestTable...\n");
         auto &txn_manager = concurrency::TransactionManagerFactory::GetInstance();
 
         const auto start = std::chrono::system_clock::now();
@@ -101,36 +103,12 @@ namespace peloton {
         }
 
 
-        /********Checking populate Correctness********/
-        /*
-        for (size_t i = 0; i < left_table_->GetTileGroupCount() &&
-                           i < right_table_->GetTileGroupCount(); ++i){
-         auto left_tile_group = left_table_->GetTileGroup(i);
-         auto right_tile_group = right_table_->GetTileGroup(i);
-         oid_t active_tuple_count = left_tile_group->GetActiveTupleCount();
-         printf("left_active:%u, right_active:%u\n", active_tuple_count,
-                 right_tile_group->GetActiveTupleCount());
-//         assert(active_tuple_count == right_tile_group->GetActiveTupleCount());
-         for (oid_t tuple_id = 0; tuple_id < active_tuple_count; tuple_id++) {
-           expression::ContainerTuple<storage::TileGroup> left_tuple(
-               left_tile_group.get(), tuple_id);
-           int left_value = left_tuple.GetValue(1).GetIntegerForTestsOnly();
-           expression::ContainerTuple<storage::TileGroup> right_tuple(
-               right_tile_group.get(), tuple_id);
-           int right_value = right_tuple.GetValue(1).GetIntegerForTestsOnly();
-           printf("testing --------- left[1]:%d \t right[1]:%d\n", left_value, right_value);
-         }
-        }
-        */
-
-        /********Checking populate Correctness End********/
-
         txn_manager.CommitTransaction();
 
         const auto end = std::chrono::system_clock::now();
         const std::chrono::duration<double> diff = end-start;
         const double ms = diff.count()*1000;
-        printf("CreateTest Table, tile_group_size:%lu, left:%lu, right:%lu, takes %lf ms\n",
+        LOG_INFO("CreateTest Table, tile_group_size:%lu, left:%lu, right:%lu, takes %lf ms\n",
                tile_group_size, left_table_tile_group_count, right_table_tile_group_count, ms);
         table_created_ = true;
       }
@@ -144,7 +122,7 @@ namespace peloton {
       std::unique_ptr<storage::DataTable> right_table_;
       bool table_created_ = false;
     };
-    //    bool ExchangeHashJoinTests::table_created_ = false;
+
     size_t BuildTestTableUtil::tile_group_size = 5;
     size_t BuildTestTableUtil::left_table_tile_group_count = 3;
     size_t BuildTestTableUtil::right_table_tile_group_count = 2;
@@ -158,15 +136,10 @@ namespace peloton {
     }
 
     std::vector<PlanNodeType> join_algorithms = {
-//    PLAN_NODE_TYPE_NESTLOOP, PLAN_NODE_TYPE_MERGEJOIN, PLAN_NODE_TYPE_HASHJOIN, PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN};
-      //  PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN};
       PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN};
 
-
-   std::vector<PelotonJoinType> join_types = {JOIN_TYPE_INNER, JOIN_TYPE_LEFT,
+    std::vector<PelotonJoinType> join_types = {JOIN_TYPE_INNER, JOIN_TYPE_LEFT,
                                              JOIN_TYPE_RIGHT, JOIN_TYPE_OUTER};
-    // std::vector<PelotonJoinType> join_types = { JOIN_TYPE_INNER };
-
 
     oid_t CountTuplesWithNullFields(executor::LogicalTile *logical_tile);
 
@@ -197,7 +170,7 @@ namespace peloton {
 
 
     void BuildTestTableUtil::ExecuteJoinTest(PlanNodeType join_algorithm, PelotonJoinType join_type,
-                         oid_t join_test_type, bool set_workload, size_t ) {
+                         oid_t join_test_type, bool set_workload, size_t workload) {
       //===--------------------------------------------------------------------===//
       // Mock table scan executors
       //===--------------------------------------------------------------------===//
@@ -354,21 +327,15 @@ namespace peloton {
 
           // Create hash plan node
           planner::HashPlan hash_plan_node(hash_keys);
-//          planner::ExchangeHashPlan exchange_hash_plan_node(hash_keys);
-
 
           // Construct the hash executor
           executor::HashExecutor hash_executor(&hash_plan_node, nullptr);
-//          executor::ExchangeHashExecutor hash_executor(&exchange_hash_plan_node, nullptr);
+          //  executor::ExchangeHashExecutor hash_executor(&exchange_hash_plan_node, nullptr);
 
 
           // Create hash join plan node.
           planner::HashJoinPlan hash_join_plan_node(join_type, std::move(predicate),
                                                     std::move(projection), schema);
-
-//          planner::ExchangeHashJoinPlan hash_join_plan_node(
-//                                        join_type, std::move(predicate),
-//                                        std::move(projection), schema);
 
 
           // Construct the hash join executor
@@ -416,8 +383,6 @@ namespace peloton {
           hash_keys.emplace_back(right_table_attr_1);
 
           // Create hash plan node
-          // planner::HashPlan hash_plan_node(hash_keys);
-          // planner::ExchangeHashPlan exchange_hash_plan_node(hash_keys);
           planner::HashPlan exchange_hash_plan_node(hash_keys);
 
           // Construct the hash executor
@@ -425,8 +390,6 @@ namespace peloton {
           //executor::HashExecutor hash_executor(&hash_plan_node, nullptr);
 
           // Create hash join plan node.
-          //planner::HashJoinPlan hash_join_plan_node(join_type, std::move(predicate),
-//                                                    std::move(projection), schema);
           planner::HashJoinPlan exchange_hash_join_plan_node(join_type, std::move(predicate),
                                                     std::move(projection), schema);
 
@@ -441,7 +404,7 @@ namespace peloton {
           parallel_hash_executor.AddChild(&right_table_scan_executor);
 
           if (set_workload) {
-//            exchange_hash_join_executor.SetTaskNumPerThread(workload);
+            exchange_hash_join_executor.SetTaskNumPerThread(workload);
           }
 
           const auto start = std::chrono::system_clock::now();
@@ -644,8 +607,6 @@ namespace peloton {
         }
 
       }
-//      left_table.reset();
-//      right_table.reset();
 
     }
 
@@ -692,14 +653,6 @@ namespace peloton {
         // Check the join fields
         auto left_tuple_join_attribute_val = join_tuple.GetValue(0);
         auto right_tuple_join_attribute_val = join_tuple.GetValue(1);
-
-/*
-        if (true) {
-          printf("testing --------- left value: %d, right value: %d\n",
-                 left_tuple_join_attribute_val.GetIntegerForTestsOnly(),
-                 right_tuple_join_attribute_val.GetIntegerForTestsOnly());
-        }
-*/
 
         EXPECT_TRUE(
           (left_tuple_join_attribute_val.IsNull() == true) ||
@@ -771,7 +724,6 @@ namespace peloton {
               //////////////////////////////////////////////////
 
 
-
 TEST_F(ExchangeHashJoinTests, BasicTest) {
 // Go over all join algorithms
 BuildTestTableUtil join_test;
@@ -835,17 +787,15 @@ for (auto join_algorithm : join_algorithms) {
 
 TEST_F(ExchangeHashJoinTests, LeftTableEmptyTest) {
   BuildTestTableUtil join_test;
-        join_test.CreateTestTable(5, 3, 2, false);
+  join_test.CreateTestTable(5, 3, 2, false);
   // Go over all join algorithms
   for (auto join_algorithm : join_algorithms) {
-    printf("JOIN ALGORITHM :: %s",
+    LOG_INFO("JOIN ALGORITHM :: %s",
              PlanNodeTypeToString(join_algorithm).c_str());
-    //join_test.ExecuteJoinTest(join_algorithm, JOIN_TYPE_RIGHT, LEFT_TABLE_EMPTY);
-
 
     // Go over all join types
     for (auto join_type : join_types) {
-      printf("JOIN TYPE :: %d", join_type);
+      LOG_INFO("JOIN TYPE :: %d", join_type);
       // Execute the join test
       join_test.ExecuteJoinTest(join_algorithm, join_type, LEFT_TABLE_EMPTY);
     }
@@ -892,20 +842,20 @@ TEST_F(ExchangeHashJoinTests, JoinPredicateTest) {
   }
 }
 
-/*
+
 TEST_F(ExchangeHashJoinTests, LargeTableCorrectnessTest) {
-  // Go over all join algorithms
   BuildTestTableUtil join_test;
   join_test.CreateTestTable(1000, 65, 20, true);
 
   // join_test.ExecuteJoinTest(PLAN_NODE_TYPE_HASHJOIN, JOIN_TYPE_RIGHT, LargeTableCorrectnessTest);
   join_test.ExecuteJoinTest(PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN, JOIN_TYPE_INNER, LargeTableCorrectnessTest, true, 10);
- join_test.ExecuteJoinTest(PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN, JOIN_TYPE_RIGHT, LargeTableCorrectnessTest, true, 10);
- join_test.ExecuteJoinTest(PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN, JOIN_TYPE_LEFT, LargeTableCorrectnessTest, true, 10);
- join_test.ExecuteJoinTest(PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN, JOIN_TYPE_OUTER, LargeTableCorrectnessTest, true, 10);
+  join_test.ExecuteJoinTest(PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN, JOIN_TYPE_RIGHT, LargeTableCorrectnessTest, true, 10);
+  join_test.ExecuteJoinTest(PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN, JOIN_TYPE_LEFT, LargeTableCorrectnessTest, true, 10);
+  join_test.ExecuteJoinTest(PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN, JOIN_TYPE_OUTER, LargeTableCorrectnessTest, true, 10);
 
 }
 
+/*
 
 
 TEST_F(ExchangeHashJoinTests, SpeedTest) {
