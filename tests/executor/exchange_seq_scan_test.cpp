@@ -330,7 +330,7 @@ TEST_F(ExchangeSeqScanTests, LeafNodeSpeedTest) {
     LOG_INFO("parallel: %lf ms", duration1);
   }
   LOG_INFO("parallel average time: %lf ms", time/10);
-  
+
   // Sequential version
   {
     std::vector<oid_t> column_ids({0, 1, 3});
