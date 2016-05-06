@@ -15,7 +15,7 @@ namespace peloton {
 namespace executor {
 
 /**
- * @brief Constructor for hash join executor.
+ * @brief Constructor for exchange hash join executor.
  * @param node Hash join node corresponding to this executor.
  */
     ExchangeHashJoinExecutor::ExchangeHashJoinExecutor(const planner::AbstractPlan *node,
@@ -24,62 +24,39 @@ namespace executor {
     }
 
 
-
     bool ExchangeHashJoinExecutor::DInit() {
       assert(children_.size() == 2);
-
       auto status = AbstractJoinExecutor::DInit();
       if (status == false) return status;
-
 
       const planner::AbstractJoinPlan &node____ =
         GetPlanNode<planner::AbstractJoinPlan>();
 
       join_type_ = node____.GetJoinType();
-      if (join_type_ == JOIN_TYPE_INNER) {
-        printf("init : join_type: inner\n");
-      }else if (join_type_ == JOIN_TYPE_LEFT){
 
-        printf("init : join_type: left\n");
-      }else if (join_type_ == JOIN_TYPE_RIGHT){
-
-        printf("init : join_type: right\n");
-      }else if (join_type_ == JOIN_TYPE_OUTER){
-
-        printf("init : join_type: outer\n");
-      }else if (join_type_ == JOIN_TYPE_INVALID){
-
-        printf("init : join_type: invalid \n");
-      }else {
-
-        printf("init : join_type: unknown\n");
-      }
-
-      //todo: child node type needs modification.
-//      assert(children_[1]->GetRawNode()->GetPlanNodeType() == PLAN_NODE_TYPE_HASH);
-//      LOG_INFO("children_[0].type %d", children_[0]->GetRawNode()->GetPlanNodeType() );
       hash_executor_ = reinterpret_cast<ExchangeHashExecutor *>(children_[1]);
       // hash_executor_ = reinterpret_cast<HashExecutor *>(children_[1]);
 
       atomic_left_matching_idx = 0;
       atomic_right_matching_idx = 0;
-      printf("Exchange Hash Join Executor init\n");
       return true;
     }
 
-
+/**
+ * @brief Buildp hase for right table.
+ * @param barrier to wait
+ */
     void ExchangeHashJoinExecutor::GetRightHashTable(Barrier * barrier){
 
       const auto start = std::chrono::system_clock::now();
 
-      printf("Build Right Child Hash Table Task picked up \n");
+      LOG_INFO("Build Right Child Hash Table Task picked up \n");
       while (children_[1]->Execute()) {
-//        printf("get one right child\n");
         BufferRightTile(children_[1]->GetOutput());
       }
-      printf("Building Right Child Hashtable Phase done. \n");
-      printf("hash_table size: %lu\n", hash_executor_->GetHashTable().size());
-      printf("right result tiles size: %lu\n", right_result_tiles_.size());
+      LOG_INFO("Building Right Child Hashtable Phase done. \n");
+      LOG_INFO("hash_table size: %lu\n", hash_executor_->GetHashTable().size());
+      LOG_INFO("right result tiles size: %lu\n", right_result_tiles_.size());
       barrier->Release();
 
 

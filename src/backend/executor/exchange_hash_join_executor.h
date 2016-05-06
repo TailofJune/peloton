@@ -8,20 +8,15 @@
 #include <vector>
 
 #include "backend/executor/abstract_join_executor.h"
-//#include "backend/planner/exchange_hash_join_plan.h"
 #include "backend/planner/hash_join_plan.h"
 #include "backend/executor/hash_executor.h"
 #include "backend/executor/exchange_hash_executor.h"
-//#include "backend/executor/abstract_parallel_executor.h"
-// #include "backend/executor/abstract_exchange_executor.h"
 
 #include "backend/common/thread_manager.h"
 #include "backend/common/barrier.h"
 #include "backend/common/lockfree_queue.h"
 #include "boost/lockfree/queue.hpp"
 #include <atomic>
-#include <chrono>
-#include <thread>
 
 namespace peloton {
   namespace executor {
@@ -35,13 +30,8 @@ namespace peloton {
 
       ConcurrentOidSet& operator=(const ConcurrentOidSet& that) = delete;
       ConcurrentOidSet& operator=(ConcurrentOidSet&& that) = delete;
-//    {
-//      container_ = std::move(that.container_);
-//      return *this;
-//    }
 
       size_t MUTEX_CNT = 16;
-//    std::mutex set_mtx;
       std::array<std::mutex, 16> mtx_list_;
       std::unordered_set<oid_t> container_;
 
@@ -52,14 +42,10 @@ namespace peloton {
         mtx_list_[mutex_id].unlock();
       }
 
-      //todo: no need to lock this func?
       bool Empty(){
-//      set_mtx.lock();
         return container_.empty();
-//      set_mtx.unlock();
       }
 
-      // empty
     };
 
     class PesudoBarrier{
@@ -96,10 +82,6 @@ namespace peloton {
 
 
 
-
-
-
-
     typedef std::vector<ConcurrentOidSet> ExHashJoinRowSets;
 
     class ExchangeHashJoinExecutor : public AbstractJoinExecutor{
@@ -114,11 +96,9 @@ namespace peloton {
 
       ~ExchangeHashJoinExecutor() = default;
 
-      void ProbeThreadMain(LogicalTile * tile, size_t curt_left_result_tiles_idx);
       void GetRightHashTable(Barrier * barrier);
       void GetLeftScanResult(Barrier * barrier);
 
-//      void Probe(std::atomic<thread_no> *no, Barrier *barrier) ;
       void Probe(std::atomic<thread_no> *no, PesudoBarrier *barrier) ;
       void UpdateLeftJoinRowSets();
       void UpdateRightJoinRowSets();
@@ -181,8 +161,6 @@ namespace peloton {
       bool prepare_children_ = false;
       bool exec_outer_join_ = false;
 
-      //std::deque<LogicalTile *> buffered_output_tiles;
-      // boost::lockfree::queue<LogicalTile *, boost::lockfree::capacity<1000>> lockfree_buffered_output_tiles;
 
       LockfreeQueue<LogicalTile * > lockfree_queue_;
       std::atomic<size_t> atomic_left_matching_idx;
@@ -191,12 +169,8 @@ namespace peloton {
 
       std::vector<std::unique_ptr<LogicalTile>> right_tiles_;
 
-      // logical tile iterators
-//      size_t left_logical_tile_itr_ = 0;
-//      size_t right_logical_tile_itr_ = 0;
       bool no_need_to_probe_ = false;
-//  const size_t SIZE_PER_PARTITION = 150;
-     size_t SIZE_PER_PARTITION = 75;
+      size_t SIZE_PER_PARTITION = 75;
 
       ExHashJoinRowSets exhj_no_matching_right_row_sets_;
 
