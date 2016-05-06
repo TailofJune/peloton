@@ -23,10 +23,6 @@
 #include "backend/executor/merge_join_executor.h"
 #include "backend/executor/nested_loop_join_executor.h"
 
-
-#include "backend/executor/exchange_hash_join_executor.h"
-#include "backend/executor/exchange_hash_executor.h"
-
 #include "backend/expression/abstract_expression.h"
 #include "backend/expression/tuple_value_expression.h"
 #include "backend/expression/expression_util.h"
@@ -35,10 +31,6 @@
 #include "backend/planner/hash_plan.h"
 #include "backend/planner/merge_join_plan.h"
 #include "backend/planner/nested_loop_join_plan.h"
-
-
-#include "backend/planner/exchange_hash_join_plan.h"
-#include "backend/planner/exchange_hash_plan.h"
 
 #include "backend/storage/data_table.h"
 #include "backend/storage/tile.h"
@@ -75,12 +67,10 @@ std::shared_ptr<const peloton::catalog::Schema> CreateJoinSchema() {
 }
 
 std::vector<PlanNodeType> join_algorithms = {
-    // PLAN_NODE_TYPE_NESTLOOP, PLAN_NODE_TYPE_MERGEJOIN, PLAN_NODE_TYPE_HASHJOIN, PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN};
-       PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN};
+    PLAN_NODE_TYPE_NESTLOOP, PLAN_NODE_TYPE_MERGEJOIN, PLAN_NODE_TYPE_HASHJOIN};
 
 std::vector<PelotonJoinType> join_types = {JOIN_TYPE_INNER, JOIN_TYPE_LEFT,
                                            JOIN_TYPE_RIGHT, JOIN_TYPE_OUTER};
-// std::vector<PelotonJoinType> join_types = {JOIN_TYPE_INNER};
 
 void ExecuteJoinTest(PlanNodeType join_algorithm, PelotonJoinType join_type,
                      oid_t join_test_type);
@@ -141,7 +131,6 @@ TEST_F(JoinTests, JoinTypesTest) {
     }
   }
 }
-
 
 TEST_F(JoinTests, ComplicatedTest) {
   // Go over all join algorithms
@@ -207,7 +196,6 @@ TEST_F(JoinTests, JoinPredicateTest) {
   }
 }
 
-/*
 TEST_F(JoinTests, SpeedTest) {
   ExecuteJoinTest(PLAN_NODE_TYPE_HASHJOIN, JOIN_TYPE_OUTER, SPEED_TEST);
 
@@ -215,8 +203,6 @@ TEST_F(JoinTests, SpeedTest) {
 
   ExecuteJoinTest(PLAN_NODE_TYPE_NESTLOOP, JOIN_TYPE_OUTER, SPEED_TEST);
 }
-
-*/
 
 void ExecuteJoinTest(PlanNodeType join_algorithm, PelotonJoinType join_type,
                      oid_t join_test_type) {
@@ -324,9 +310,7 @@ void ExecuteJoinTest(PlanNodeType join_algorithm, PelotonJoinType join_type,
   } else if (join_test_type == LEFT_TABLE_EMPTY) {
     ExpectEmptyTileResult(&left_table_scan_executor);
   } else if (join_test_type == RIGHT_TABLE_EMPTY) {
-    // if (join_type == JOIN_TYPE_INNER || join_type == JOIN_TYPE_RIGHT) {
-       if ((join_type == JOIN_TYPE_INNER || join_type == JOIN_TYPE_RIGHT) && (join_algorithm != PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN))  {
-
+    if (join_type == JOIN_TYPE_INNER || join_type == JOIN_TYPE_RIGHT) {
       ExpectMoreThanOneTileResults(&left_table_scan_executor,
                                    left_table_logical_tile_ptrs);
     } else {
@@ -356,7 +340,7 @@ void ExecuteJoinTest(PlanNodeType join_algorithm, PelotonJoinType join_type,
   } else if (join_test_type == LEFT_TABLE_EMPTY) {
     if (join_type == JOIN_TYPE_INNER || join_type == JOIN_TYPE_LEFT) {
       // For hash join, we always build the hash table from right child
-      if (join_algorithm == PLAN_NODE_TYPE_HASHJOIN || join_algorithm == PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN) {
+      if (join_algorithm == PLAN_NODE_TYPE_HASHJOIN) {
         ExpectNormalTileResults(right_table_tile_group_count,
                                 &right_table_scan_executor,
                                 right_table_logical_tile_ptrs);
@@ -455,8 +439,7 @@ void ExecuteJoinTest(PlanNodeType join_algorithm, PelotonJoinType join_type,
 
     } break;
 
-    case PLAN_NODE_TYPE_HASHJOIN:
-    case PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN: {
+    case PLAN_NODE_TYPE_HASHJOIN: {
       // Create hash plan node
       expression::AbstractExpression *right_table_attr_1 =
           new expression::TupleValueExpression(1, 1);
@@ -469,16 +452,15 @@ void ExecuteJoinTest(PlanNodeType join_algorithm, PelotonJoinType join_type,
       planner::HashPlan hash_plan_node(hash_keys);
 
       // Construct the hash executor
-      // executor::HashExecutor hash_executor(&hash_plan_node, nullptr);
-      executor::ExchangeHashExecutor hash_executor(&hash_plan_node, nullptr);
+      executor::HashExecutor hash_executor(&hash_plan_node, nullptr);
 
       // Create hash join plan node.
       planner::HashJoinPlan hash_join_plan_node(join_type, std::move(predicate),
                                                 std::move(projection), schema);
 
       // Construct the hash join executor
-      // executor::HashJoinExecutor hash_join_executor(&hash_join_plan_node, nullptr);
-      executor::ExchangeHashJoinExecutor hash_join_executor(&hash_join_plan_node, nullptr);
+      executor::HashJoinExecutor hash_join_executor(&hash_join_plan_node,
+                                                    nullptr);
 
       // Construct the executor tree
       hash_join_executor.AddChild(&left_table_scan_executor);
