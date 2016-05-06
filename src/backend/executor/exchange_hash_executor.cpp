@@ -29,6 +29,10 @@ bool ExchangeHashExecutor::DInit() {
   return true;
 }
 
+/*
+ * An inidvidual task for bulding the hash table
+ * Basically it inserts all records in one logical tile into the hash table
+ */
 void ExchangeHashExecutor::BuildHashTableThreadMain(LogicalTile *tile, size_t child_tile_itr, Barrier *barrier) {
   // Construct the hash table by going over given logical tile and hashing
 
@@ -57,6 +61,7 @@ void ExchangeHashExecutor::BuildHashTableThreadMain(LogicalTile *tile, size_t ch
     }
   }
 
+  // Mark task done
   barrier->Release();
 }
 
@@ -85,12 +90,14 @@ bool ExchangeHashExecutor::DExecute() {
       column_ids_.push_back(tuple_value->GetColumnId());
     }
 
+    size_t tuple_count = 0;
     // First, get all the input logical tiles
     while (children_[0]->Execute()) {
       auto tile = children_[0]->GetOutput();
+      tuple_count += tile->GetTupleCount();
       child_tiles_.emplace_back(tile);
     }
-    EnsureTableSize();
+    EnsureTableSize(tuple_count);
     Barrier barrier((thread_no)child_tiles_.size());
     for(size_t no = 0; no<child_tiles_.size(); ++no) {
       std::function<void()> f_build_hash_table = std::bind(&ExchangeHashExecutor::BuildHashTableThreadMain, this,
@@ -98,7 +105,7 @@ bool ExchangeHashExecutor::DExecute() {
       ThreadManager::GetInstance().AddTask(f_build_hash_table);
     }
 
-    // make sure building hashmap is done before return any child tiles.
+    // Make sure building hashmap is done before returning any tiles.
     barrier.Wait();
     done_ = true;
   }

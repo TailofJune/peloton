@@ -308,6 +308,7 @@ TEST_F(ExchangeSeqScanTests, LeafNodeSpeedTest) {
   LOG_INFO("CreateTable done");
 
   // Parallel version
+  double time = 0;
   for(int i=0; i<10; ++i) {
     LOG_INFO("iteration %d", i+1);
     // Column ids to be added to logical tile after scan.
@@ -324,9 +325,11 @@ TEST_F(ExchangeSeqScanTests, LeafNodeSpeedTest) {
     executor::ExchangeSeqScanExecutor executor(&node, context.get());
     std::vector<executor::LogicalTile *> result;
     double duration1 = GetRunTime(executor, &result);
+    time += duration1;
     txn_manager.CommitTransaction();
     LOG_INFO("parallel: %lf ms", duration1);
   }
+  LOG_INFO("parallel average time: %lf ms", time/10);
 
   // Sequential version
   {

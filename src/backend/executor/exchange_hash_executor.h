@@ -53,7 +53,7 @@ class ExchangeHashExecutor : public AbstractExecutor {
   bool DExecute();
 
  private:
-  inline void EnsureTableSize() { hash_table_.reserve((size_t)(child_tiles_.size()*0.8)); }
+  inline void EnsureTableSize(size_t tuple_count) { hash_table_.reserve((size_t)(tuple_count*0.8)); }
   /** @brief Hash table */
   HashMapType hash_table_;
 

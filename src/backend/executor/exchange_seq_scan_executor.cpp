@@ -46,7 +46,8 @@ bool ExchangeSeqScanExecutor::DInit() {
 }
 
 /*
- * This method is not supposed to be called by multiple threads
+ * This method is not supposed to be called by multiple threads, even though
+ * we are implementing a parallelized executor.
  */
 bool ExchangeSeqScanExecutor::DExecute() {
   if(!done_) {
@@ -56,7 +57,7 @@ bool ExchangeSeqScanExecutor::DExecute() {
 
       assert(target_table_==nullptr);
       assert(column_ids_.size()==0);
-      // In this case, just use sequential scan executor
+      // In this case, just use one thread to pull data
       while(children_[0]->Execute()) {
         std::unique_ptr<LogicalTile> tile(children_[0]->GetOutput());
         if(predicate_!=nullptr) {
@@ -90,6 +91,7 @@ bool ExchangeSeqScanExecutor::DExecute() {
                 std::bind(&ExchangeSeqScanExecutor::ScanOneTileGroup, this,
                           no, concurrency::current_txn));
       {
+        // Wait for all tasks to be done
         std::unique_lock<std::mutex> lock(result_lock_);
         while(finished_number_<tile_group_number_)
           cv_.wait(lock);
@@ -108,8 +110,25 @@ bool ExchangeSeqScanExecutor::DExecute() {
   return true;
 }
 
-void ExchangeSeqScanExecutor::ScanOneTileGroup(const oid_t no, concurrency::Transaction *transaction) {
-  concurrency::current_txn = transaction;
+/*
+ * Do a table scan on one tile group
+ */
+void ExchangeSeqScanExecutor::ScanOneTileGroup(const oid_t no, concurrency::Transaction */*unused*/) {
+  /*
+   * This part is basically the same as single thread version of sequential scan executor, except
+   * we didn't put any transaction isolation management code here.
+   * There are two reasons for this:
+   * 1. The data structure used in transaction manager is not thread-safe.
+   *   By making transaction thread local (src/backend/concurrency/transaction_manager.h),
+   * the transaction manager implicitly assumes that each transaction uses only one thread.
+   * Therefore the inner data structure is not thread safe (src/backend/concurrency/transaction.h).
+   * 2. Depending on how many data actually read, this transaction manager might be a big overhead.
+   *   This is because for each record we read, the tm will put on entry in the read set. For an OLAP query
+   * which typically scans an entire large table, this is a big overhead both in time and memory.
+   * Therefore, we didn't use transaction manager here and expects this executor only work on the portion of
+   * table that has been transformed into DSM and is read-only.
+   * This is also the reason why we didn't merge this part of code into seq_scan_executor
+   */
   auto tile_group = target_table_->GetTileGroup(no);
   oid_t active_tuple_count = tile_group->GetNextTupleSlot();
 
@@ -133,6 +152,7 @@ void ExchangeSeqScanExecutor::ScanOneTileGroup(const oid_t no, concurrency::Tran
   }
 
   {
+    // Mark one task as done
     std::lock_guard<std::mutex> guard(result_lock_);
     // Don't return empty tiles
     if(!position_list.empty()) {
@@ -145,6 +165,7 @@ void ExchangeSeqScanExecutor::ScanOneTileGroup(const oid_t no, concurrency::Tran
 
     ++finished_number_;
     if(finished_number_==tile_group_number_)
+      // wake up coordinate thread
       cv_.notify_one();
   }
 }

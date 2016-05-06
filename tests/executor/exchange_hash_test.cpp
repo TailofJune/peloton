@@ -295,13 +295,68 @@ TEST_F(ExchangeHashExecutorTests, CorrectnessTest) {
 
 
 TEST_F(ExchangeHashExecutorTests, SpeedTest) {
-  constexpr size_t tile_num = 3000;
-  constexpr size_t row_num = 10000;
+  constexpr size_t tile_num = 300;
+  constexpr size_t row_num = 100000;
 
   // Create table.
   std::unique_ptr<storage::DataTable> right_table(CreateTable(tile_num, row_num));
 
   LOG_INFO("CreateTable done");
+
+  // Parallel version
+  double time = 0;
+  for(int i=0; i<10; ++i) {
+    LOG_INFO("iteration %d", i+1);
+    MockExecutor right_table_scan_executor;
+
+    std::vector<std::unique_ptr<executor::LogicalTile>>
+            right_table_logical_tile_ptrs;
+    constexpr size_t right_table_tile_group_count = tile_num;
+
+    for(size_t right_table_tile_group_itr = 0;
+        right_table_tile_group_itr<right_table_tile_group_count;
+        right_table_tile_group_itr++) {
+      std::unique_ptr<executor::LogicalTile> right_table_logical_tile(
+              executor::LogicalTileFactory::WrapTileGroup(
+                      right_table->GetTileGroup(right_table_tile_group_itr)));
+      right_table_logical_tile_ptrs.push_back(
+              std::move(right_table_logical_tile));
+    }
+
+    // Right scan executor returns logical tiles from the right table
+
+    EXPECT_CALL(right_table_scan_executor, DInit()).WillOnce(Return(true));
+
+    ExpectNormalTileResults(
+            right_table_tile_group_count,
+            &right_table_scan_executor,
+            right_table_logical_tile_ptrs);
+
+    // Create hash keys
+    expression::AbstractExpression *right_table_attr_1 =
+            new expression::TupleValueExpression(1, 1);
+
+    std::vector<std::unique_ptr<const expression::AbstractExpression>>
+            hash_keys;
+    hash_keys.emplace_back(right_table_attr_1);
+
+    // Create hash plan node
+    planner::HashPlan hash_plan_node(hash_keys);
+
+    // Construct the hash executor
+    executor::ExchangeHashExecutor hash_executor(&hash_plan_node, nullptr);
+    hash_executor.AddChild(&right_table_scan_executor);
+
+    const auto start = std::chrono::system_clock::now();
+    EXPECT_TRUE(hash_executor.Init());
+    EXPECT_TRUE(hash_executor.Execute());
+    const auto end = std::chrono::system_clock::now();
+    const std::chrono::duration<double> diff = end-start;
+    const double ms = diff.count()*1000;
+    time += ms;
+    LOG_INFO("ExchangeHashExecutor execution time: %lf ms", ms);
+  }
+  LOG_INFO("ExchangeHashExecutor average time: %lf ms", time/10);
 
   // Sequential version
   {
@@ -352,58 +407,6 @@ TEST_F(ExchangeHashExecutorTests, SpeedTest) {
     const std::chrono::duration<double> diff = end-start;
     const double ms = diff.count()*1000;
     LOG_INFO("HashExecutor execution time: %lf ms", ms);
-  }
-
-  // Parallel version
-  for(int i=0; i<10; ++i) {
-    LOG_INFO("iteration %d", i+1);
-    MockExecutor right_table_scan_executor;
-
-    std::vector<std::unique_ptr<executor::LogicalTile>>
-            right_table_logical_tile_ptrs;
-    constexpr size_t right_table_tile_group_count = tile_num;
-
-    for(size_t right_table_tile_group_itr = 0;
-        right_table_tile_group_itr<right_table_tile_group_count;
-        right_table_tile_group_itr++) {
-      std::unique_ptr<executor::LogicalTile> right_table_logical_tile(
-              executor::LogicalTileFactory::WrapTileGroup(
-                      right_table->GetTileGroup(right_table_tile_group_itr)));
-      right_table_logical_tile_ptrs.push_back(
-              std::move(right_table_logical_tile));
-    }
-
-    // Right scan executor returns logical tiles from the right table
-
-    EXPECT_CALL(right_table_scan_executor, DInit()).WillOnce(Return(true));
-
-    ExpectNormalTileResults(
-            right_table_tile_group_count,
-            &right_table_scan_executor,
-            right_table_logical_tile_ptrs);
-
-    // Create hash keys
-    expression::AbstractExpression *right_table_attr_1 =
-            new expression::TupleValueExpression(1, 1);
-
-    std::vector<std::unique_ptr<const expression::AbstractExpression>>
-            hash_keys;
-    hash_keys.emplace_back(right_table_attr_1);
-
-    // Create hash plan node
-    planner::HashPlan hash_plan_node(hash_keys);
-
-    // Construct the hash executor
-    executor::ExchangeHashExecutor hash_executor(&hash_plan_node, nullptr);
-    hash_executor.AddChild(&right_table_scan_executor);
-
-    const auto start = std::chrono::system_clock::now();
-    EXPECT_TRUE(hash_executor.Init());
-    EXPECT_TRUE(hash_executor.Execute());
-    const auto end = std::chrono::system_clock::now();
-    const std::chrono::duration<double> diff = end-start;
-    const double ms = diff.count()*1000;
-    LOG_INFO("ExchangeHashExecutor execution time: %lf ms", ms);
   }
 }
 
