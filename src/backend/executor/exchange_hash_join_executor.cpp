@@ -59,7 +59,7 @@ namespace executor {
 //      assert(children_[1]->GetRawNode()->GetPlanNodeType() == PLAN_NODE_TYPE_HASH);
 //      LOG_INFO("children_[0].type %d", children_[0]->GetRawNode()->GetPlanNodeType() );
       hash_executor_ = reinterpret_cast<ExchangeHashExecutor *>(children_[1]);
-      //hash_executor_ = reinterpret_cast<HashExecutor *>(children_[1]);
+      // hash_executor_ = reinterpret_cast<HashExecutor *>(children_[1]);
 
       atomic_left_matching_idx = 0;
       atomic_right_matching_idx = 0;
@@ -153,12 +153,12 @@ namespace executor {
 //          std::unordered_set<std::pair<size_t, oid_t>,
 //            boost::hash<std::pair<size_t, oid_t>>> right_tuples;
           bool if_match = hash_table.find(left_tuple, right_tuples);
-//          bool if_match = hash_table.contains(left_tuple);
-          //auto got = hash_table.find(left_tuple);
+        //  bool if_match = hash_table.contains(left_tuple);
+          // auto got = hash_table.find(left_tuple);
           if (if_match) {
-          //if (got != hash_table.end()) {
+          // if (got != hash_table.end()) {
 //            auto right_tuples = hash_table.find(left_tuple);
-            //auto right_tuples = got->second;
+            // auto right_tuples = got->second;
             RecordMatchedLeftRow(cur_idx, left_tile_itr);
 
 
@@ -243,6 +243,7 @@ namespace executor {
  * @return true on success, false otherwise.
  */
     bool ExchangeHashJoinExecutor::DExecute() {
+
 
       // Loop until we have non-empty result tile or exit
       for (; ;) {
@@ -343,7 +344,9 @@ namespace executor {
 //          if (no_need_to_probe_ == false &&
           if (probe_barrier_.IsNoNeedToDo() == false &&
               probe_barrier_.IsDone() == false){
-            continue;
+              LOG_INFO("Launch Finish\n");
+              // printf("launch finish... .\n");
+              continue;
           }
           main_end = std::chrono::system_clock::now();
           const std::chrono::duration<double> diff = main_end - main_start;

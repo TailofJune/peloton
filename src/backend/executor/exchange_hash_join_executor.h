@@ -10,7 +10,7 @@
 #include "backend/executor/abstract_join_executor.h"
 //#include "backend/planner/exchange_hash_join_plan.h"
 #include "backend/planner/hash_join_plan.h"
-//#include "backend/executor/hash_executor.h"
+#include "backend/executor/hash_executor.h"
 #include "backend/executor/exchange_hash_executor.h"
 //#include "backend/executor/abstract_parallel_executor.h"
 // #include "backend/executor/abstract_exchange_executor.h"
@@ -59,35 +59,6 @@ namespace peloton {
       // empty
     };
 
-/*
-    typedef std::uint_least32_t thread_no;
-
-      class ExBarrier {
-    public:
-      thread_no total_;
-      ExBarrier(thread_no total): total_(total) { }
-      void Release() {
-        std::lock_guard<std::mutex> lock(mutex_);
-        ++count_;
-        assert(count_<=total_);
-        printf("Release.....\n");
-        if(count_==total_){
-          cv_.notify_one();
-        }
-      }
-      ExBarrier(): total_(0){}
-      void Wait() {
-        std::unique_lock<std::mutex> lock(mutex_);
-        while(count_<total_)
-          cv_.wait(lock);
-      }
-    protected:
-      // total number of worker threads
-      std::mutex mutex_;
-      std::condition_variable cv_;
-      size_t count_ = 0;
-    };
-*/
     class PesudoBarrier{
     public:
       void Release() {
@@ -199,7 +170,7 @@ namespace peloton {
       bool DExecute();
 
       private:
-      //HashExecutor *hash_executor_ = nullptr;
+      // HashExecutor *hash_executor_ = nullptr;
       ExchangeHashExecutor *hash_executor_ = nullptr;
 
 
@@ -208,7 +179,9 @@ namespace peloton {
       bool exec_outer_join_ = false;
 
       //std::deque<LogicalTile *> buffered_output_tiles;
-      boost::lockfree::queue<LogicalTile *, boost::lockfree::capacity<60000>> lockfree_buffered_output_tiles;
+      boost::lockfree::queue<LogicalTile *, boost::lockfree::capacity<1000>> lockfree_buffered_output_tiles;
+
+      // LockfreeQueue<LogicalTile * >
       std::atomic<size_t> atomic_left_matching_idx;
       std::atomic<size_t> atomic_right_matching_idx;
 
