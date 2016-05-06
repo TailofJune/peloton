@@ -40,7 +40,7 @@ using ::testing::Return;
 namespace peloton {
 namespace test {
 
-class ParallelSeqScanTests : public PelotonTest {};
+class ExchangeSeqScanTests : public PelotonTest {};
 const std::set<oid_t> g_tuple_ids({0, 3});
 
 /*
@@ -227,7 +227,7 @@ double GetRunTime(executor::SeqScanExecutor &executor, std::vector<std::unique_p
   return ms;
 }
 
-TEST_F(ParallelSeqScanTests, LeafNodeCorrectnessTest) {
+TEST_F(ExchangeSeqScanTests, LeafNodeCorrectnessTest) {
   constexpr size_t tile_num = 10;
   constexpr size_t row_num = 100;
   // Create table.
@@ -298,8 +298,8 @@ TEST_F(ParallelSeqScanTests, LeafNodeCorrectnessTest) {
   txn_manager.CommitTransaction();
 }
 
-/*
-TEST_F(ParallelSeqScanTests, LeafNodeSpeedTest) {
+
+TEST_F(ExchangeSeqScanTests, LeafNodeSpeedTest) {
   constexpr size_t tile_num = 100000;
   constexpr size_t row_num = 1000;
   // Create table.
@@ -346,6 +346,6 @@ TEST_F(ParallelSeqScanTests, LeafNodeSpeedTest) {
     LOG_INFO("single thread: %lf ms", duration2);
   }
 }
-*/
+
 }
 }

@@ -43,7 +43,7 @@ using ::testing::InSequence;
 namespace peloton {
 namespace test {
 
-class ParallelHashExecutorTests: public PelotonTest { };
+class ExchangeHashExecutorTests: public PelotonTest { };
 
 /*
  * create a table with tile_group_num tiles, each of which has row_num rows.
@@ -168,9 +168,9 @@ void ExpectNormalTileResults(
   }
 }
 
-TEST_F(ParallelHashExecutorTests, CorrectnessTest) {
-  constexpr size_t tile_num = 30;
-  constexpr size_t row_num = 100;
+TEST_F(ExchangeHashExecutorTests, CorrectnessTest) {
+  constexpr size_t tile_num = 300;
+  constexpr size_t row_num = 1000;
 
   constexpr size_t right_table_tile_group_count = tile_num;
 
@@ -271,7 +271,7 @@ TEST_F(ParallelHashExecutorTests, CorrectnessTest) {
   // Ensure in the end we have an empty table 2
   auto &hash_table = hash_executor.GetHashTable();
   auto &hash_table2 = parallel_hash_executor.GetHashTable();
-  LOG_INFO("hash table size=%lu, parallel hash table size=%lu",
+  LOG_INFO("hash table size=%lu, concurrent hash table size=%lu",
           (unsigned long)hash_table.size(),
           (unsigned long)hash_table2.size());
   {
@@ -293,8 +293,8 @@ TEST_F(ParallelHashExecutorTests, CorrectnessTest) {
   }
 }
 
-/*
-TEST_F(ParallelHashExecutorTests, SpeedTest) {
+
+TEST_F(ExchangeHashExecutorTests, SpeedTest) {
   constexpr size_t tile_num = 3000;
   constexpr size_t row_num = 10000;
 
@@ -403,10 +403,10 @@ TEST_F(ParallelHashExecutorTests, SpeedTest) {
     const auto end = std::chrono::system_clock::now();
     const std::chrono::duration<double> diff = end-start;
     const double ms = diff.count()*1000;
-    LOG_INFO("ParallelHashExecutor execution time: %lf ms", ms);
+    LOG_INFO("ExchangeHashExecutor execution time: %lf ms", ms);
   }
 }
- */
+
 }
 }
 

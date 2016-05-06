@@ -58,8 +58,6 @@ void ExchangeHashExecutor::BuildHashTableThreadMain(LogicalTile *tile, size_t ch
   }
 
   barrier->Release();
-
-  printf("release one.\n");
 }
 
 /*
@@ -102,7 +100,6 @@ bool ExchangeHashExecutor::DExecute() {
 
     // make sure building hashmap is done before return any child tiles.
     barrier.Wait();
-    printf("pass wait.\n");
     done_ = true;
   }
 
