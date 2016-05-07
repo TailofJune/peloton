@@ -61,7 +61,7 @@ The implementation detail of specific exchange executors can be found at source 
 
 ## Special attention
 * The exchange sequential scan does not call transaction functions to ensure isolation. The reason can be found in source code comment.
-*  Some tests are disabled b.c. large data tables should be built in the tests, which can be extremely slow when valgrind is on.
+*  Some tests (in exchange_hash_join_test.cpp and exchange_hash_test.cpp )are disabled b.c. large data tables should be built in the tests, which can be extremely slow when valgrind is on.
 * The ExchangeHashJoinExectuor relies on boost::lockfree\_queue, which has some minor uinitialized value bug, thus the exchange\_hash\_join\_test cannot pass valgrind's check, and is currently commented (To add it back, just add it into the Makefile). However, ExchangeHashJoinExectuor can work and pass all the built in test and largeCorrectnessTest in exchange_hash_join_test.
 
 * The `sleep_for()` function in ExchangeHashJoinExecutor is there because valgrind somehow causse the main thread to do busy loop, and other threads will not be scheduled. And `sleep_for()` will make the threads be scheduled as usual. It's notable that this function will rarely be called in common use. Because in common case, when other threads are working, there must be something to picked up in the queue.

@@ -60,7 +60,6 @@ class PesudoBarrier {
   void SetNeedToDo(bool value) { no_need_to_do_ = value; }
 
  private:
-  // total number of worker threads
   thread_no total_;
   bool done = false;
   std::mutex mutex_;
@@ -137,7 +136,6 @@ class ExchangeHashJoinExecutor : public AbstractJoinExecutor {
   bool DExecute();
 
  private:
-  // HashExecutor *hash_executor_ = nullptr;
   ExchangeHashExecutor *hash_executor_ = nullptr;
 
   bool hashed_ = false;

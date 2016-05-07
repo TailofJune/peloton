@@ -29,7 +29,6 @@ bool ExchangeHashJoinExecutor::DInit() {
   join_type_ = node____.GetJoinType();
 
   hash_executor_ = reinterpret_cast<ExchangeHashExecutor *>(children_[1]);
-  // hash_executor_ = reinterpret_cast<HashExecutor *>(children_[1]);
 
   atomic_left_matching_idx = 0;
   atomic_right_matching_idx = 0;
