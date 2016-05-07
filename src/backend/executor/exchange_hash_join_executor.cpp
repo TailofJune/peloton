@@ -121,7 +121,6 @@ namespace executor {
                   output_tile->SetPositionListsAndVisibility(
                     pos_lists_builder.Release());
                   lockfree_buffered_output_tiles.push(output_tile.release());
-                  // lockfree_queue_.TryPush(output_tile.release());
                 }
 
                 // Get the logical tile from right child
@@ -152,7 +151,6 @@ namespace executor {
         if (pos_lists_builder.Size() > 0) {
           LOG_TRACE("Join tile size : %lu \n", pos_lists_builder.Size());
           output_tile->SetPositionListsAndVisibility(pos_lists_builder.Release());
-          // lockfree_queue_.TryPush(output_tile.release());
           lockfree_buffered_output_tiles.push(output_tile.release());
 
         }
@@ -306,7 +304,6 @@ namespace executor {
 
         output_tile->SetPositionListsAndVisibility(pos_lists_builder.Release());
         lockfree_buffered_output_tiles.push(output_tile.release());
-        // lockfree_queue_.TryPush(output_tile.release());
 
         atomic_left_matching_idx.fetch_add(1);
         return true;
@@ -354,7 +351,6 @@ namespace executor {
 
         output_tile->SetPositionListsAndVisibility(pos_lists_builder.Release());
         lockfree_buffered_output_tiles.push(output_tile.release());
-        // lockfree_queue_.TryPush(output_tile.release());
 
 
         atomic_right_matching_idx.fetch_add(1);

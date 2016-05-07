@@ -10,7 +10,6 @@
 
 #include "backend/common/thread_manager.h"
 #include "backend/common/barrier.h"
-#include "backend/common/lockfree_queue.h"
 #include "boost/lockfree/queue.hpp"
 #include <atomic>
 
@@ -160,7 +159,6 @@ namespace peloton {
 
       boost::lockfree::queue<LogicalTile *, boost::lockfree::capacity<1000>> lockfree_buffered_output_tiles;
 
-      // LockfreeQueue<LogicalTile * > lockfree_queue_;
       std::atomic<size_t> atomic_left_matching_idx;
       std::atomic<size_t> atomic_right_matching_idx;
 
