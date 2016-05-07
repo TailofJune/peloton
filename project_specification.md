@@ -59,8 +59,11 @@ The way we do this is like this:
 ## How do we insert exchange executors?
 Peloton derives plan trees from Postgres.
 Postgres generates a plan tree corresponding to a query, Peloton then translate that tree into Peloton plan tree. At execution time, an executor tree is generated according to this plan tree and gets executed. Therefore, we have two places to insert exchange executors: either create our own version of exchange plan nodes (and then generate exchange executors based on exchange plan nodes) or directly generate exchange executors based on normal plan nodes.
+
 We first tried the first approach. Then we think the second is better. The reasons are: 1) Our exchange plan nodes do not actually have anything different than the corresponding normal plan nodes; 2) Sharing same type of plan nodes is better for caching plan trees. Therefore, we choose the second approach in the end.
+
 The code is at "src/backend/bridge/dml/executor/plan_executor.cpp" file "BuildExecutorTree" function.
+
 The code for the first approach is at "src/backend/bridge/dml/mapper/mapper_parallel_plan.cpp", in case someone wants to switch to the first approach later (for example because exchange plan nodes need something different than normal plan nodes).
 
 ## How do exchange executors work?
