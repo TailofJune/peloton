@@ -1,10 +1,10 @@
+#include <backend/common/thread_manager.h>
 #include <utility>
 #include <vector>
-#include <backend/common/thread_manager.h>
 
-#include "backend/planner/exchange_hash_plan.h"
 #include "backend/executor/exchange_hash_executor.h"
 #include "backend/expression/tuple_value_expression.h"
+#include "backend/planner/exchange_hash_plan.h"
 
 namespace peloton {
 namespace executor {
@@ -14,7 +14,7 @@ namespace executor {
  */
 ExchangeHashExecutor::ExchangeHashExecutor(const planner::AbstractPlan *node,
                                            ExecutorContext *executor_context)
-        : AbstractExecutor(node, executor_context) {}
+    : AbstractExecutor(node, executor_context) {}
 
 /**
  * @brief Do some basic checks and initialize executor state.
@@ -33,28 +33,38 @@ bool ExchangeHashExecutor::DInit() {
  * An inidvidual task for bulding the hash table
  * Basically it inserts all records in one logical tile into the hash table
  */
-void ExchangeHashExecutor::BuildHashTableThreadMain(LogicalTile *tile, size_t child_tile_itr, Barrier *barrier) {
+void ExchangeHashExecutor::BuildHashTableThreadMain(LogicalTile *tile,
+                                                    size_t child_tile_itr,
+                                                    Barrier *barrier) {
   // Construct the hash table by going over given logical tile and hashing
 
   // Go over all tuples in the logical tile
   for (oid_t tuple_id : *tile) {
     // Key : container tuple with a subset of tuple attributes
     // Value : < child_tile offset, tuple offset >
-    bool ok = hash_table_.update_fn(HashMapType::key_type(tile, tuple_id, &column_ids_), [&] (MapValueType& inner) {
-        inner.insert(std::make_pair(child_tile_itr, tuple_id));
-    });
+    bool ok = hash_table_.update_fn(
+        HashMapType::key_type(tile, tuple_id, &column_ids_),
+        [&](MapValueType &inner) {
+          inner.insert(std::make_pair(child_tile_itr, tuple_id));
+        });
 
     if (!ok) {
-      hash_table_.upsert(HashMapType::key_type(tile, tuple_id, &column_ids_), [&](MapValueType& inner) {
-          // It is possbile this insert would succeed.
-          // I won't check since I am using unordered_set, even insert succeed,
-          // another won't hurt.
-          inner.insert(std::make_pair(child_tile_itr, tuple_id));
-      }, MapValueType());
+      hash_table_.upsert(
+          HashMapType::key_type(tile, tuple_id, &column_ids_),
+          [&](MapValueType &inner) {
+            // It is possbile this insert would succeed.
+            // I won't check since I am using unordered_set, even insert
+            // succeed,
+            // another won't hurt.
+            inner.insert(std::make_pair(child_tile_itr, tuple_id));
+          },
+          MapValueType());
 
-      hash_table_.update_fn(HashMapType::key_type(tile, tuple_id, &column_ids_), [&] (MapValueType& inner) {
-          inner.insert(std::make_pair(child_tile_itr, tuple_id));
-      });
+      hash_table_.update_fn(
+          HashMapType::key_type(tile, tuple_id, &column_ids_),
+          [&](MapValueType &inner) {
+            inner.insert(std::make_pair(child_tile_itr, tuple_id));
+          });
 
       // There is no way second update fail.
       assert(ok == true);
@@ -66,13 +76,15 @@ void ExchangeHashExecutor::BuildHashTableThreadMain(LogicalTile *tile, size_t ch
 }
 
 /*
- * exchange_hash_executor has only one child, which should be exchange_seq_scan (assume no index).
- * exchange_hash_executor creates parallel task only when it gets logical tiles for exechagne_seq_scan.
+ * exchange_hash_executor has only one child, which should be exchange_seq_scan
+ * (assume no index).
+ * exchange_hash_executor creates parallel task only when it gets logical tiles
+ * for exechagne_seq_scan.
  */
 bool ExchangeHashExecutor::DExecute() {
   LOG_INFO("Exchange Hash Executor");
   if (done_ == false) {
-    const planner::HashPlan& node = GetPlanNode<planner::HashPlan>();
+    const planner::HashPlan &node = GetPlanNode<planner::HashPlan>();
 
     /* *
     * HashKeys is a vector of TupleValue expr
@@ -85,8 +97,8 @@ bool ExchangeHashExecutor::DExecute() {
     for (auto &hashkey : hashkeys) {
       assert(hashkey->GetExpressionType() == EXPRESSION_TYPE_VALUE_TUPLE);
       auto tuple_value =
-              reinterpret_cast<const expression::TupleValueExpression *>(
-                      hashkey.get());
+          reinterpret_cast<const expression::TupleValueExpression *>(
+              hashkey.get());
       column_ids_.push_back(tuple_value->GetColumnId());
     }
 
@@ -99,9 +111,10 @@ bool ExchangeHashExecutor::DExecute() {
     }
     EnsureTableSize(tuple_count);
     Barrier barrier((Barrier::thread_no)child_tiles_.size());
-    for(size_t no = 0; no<child_tiles_.size(); ++no) {
-      std::function<void()> f_build_hash_table = std::bind(&ExchangeHashExecutor::BuildHashTableThreadMain, this,
-                                                           child_tiles_[no].get(), no, &barrier);
+    for (size_t no = 0; no < child_tiles_.size(); ++no) {
+      std::function<void()> f_build_hash_table =
+          std::bind(&ExchangeHashExecutor::BuildHashTableThreadMain, this,
+                    child_tiles_[no].get(), no, &barrier);
       ThreadManager::GetInstance().AddTask(f_build_hash_table);
     }
 
@@ -123,7 +136,6 @@ bool ExchangeHashExecutor::DExecute() {
   }
   LOG_TRACE("Exchange Hash Executor : false -- done ");
   return false;
-
 }
 
 }  // namespace executor

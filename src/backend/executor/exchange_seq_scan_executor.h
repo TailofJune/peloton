@@ -1,35 +1,33 @@
 #pragma once
 
-#include <queue>
 #include <atomic>
 #include <cassert>
-#include <mutex>
 #include <condition_variable>
+#include <mutex>
+#include <queue>
 
-#include "backend/planner/abstract_scan_plan.h"
 #include "backend/common/types.h"
 #include "backend/executor/abstract_executor.h"
+#include "backend/planner/abstract_scan_plan.h"
 
 namespace peloton {
 namespace executor {
-class ExchangeSeqScanExecutor: public AbstractExecutor {
+class ExchangeSeqScanExecutor : public AbstractExecutor {
  public:
   ExchangeSeqScanExecutor(const ExchangeSeqScanExecutor &) = delete;
   ExchangeSeqScanExecutor &operator=(const ExchangeSeqScanExecutor &) = delete;
   ExchangeSeqScanExecutor(ExchangeSeqScanExecutor &&) = delete;
   ExchangeSeqScanExecutor &operator=(ExchangeSeqScanExecutor &&) = delete;
 
-  explicit ExchangeSeqScanExecutor(
-          const planner::AbstractPlan *node,
-          ExecutorContext *executor_context):
-          AbstractExecutor(node, executor_context) { }
+  explicit ExchangeSeqScanExecutor(const planner::AbstractPlan *node,
+                                   ExecutorContext *executor_context)
+      : AbstractExecutor(node, executor_context) {}
 
  protected:
   bool DInit();
   bool DExecute();
-  void ScanOneTileGroup(
-          const oid_t no,
-          concurrency::Transaction *transaction);
+  void ScanOneTileGroup(const oid_t no, concurrency::Transaction *transaction);
+
  protected:
   /** @brief Selection predicate. */
   const expression::AbstractExpression *predicate_ = nullptr;

@@ -5,9 +5,9 @@
 
 #pragma once
 
-#include "backend/planner/abstract_plan.h"
 #include "backend/common/types.h"
 #include "backend/expression/abstract_expression.h"
+#include "backend/planner/abstract_plan.h"
 #include "backend/planner/hash_plan.h"
 
 namespace peloton {
@@ -25,7 +25,7 @@ class ExchangeHashPlan : public AbstractPlan {
   typedef std::unique_ptr<HashKeyType> HashKeyPtrType;
 
   ExchangeHashPlan(std::vector<HashKeyPtrType> &hashkeys)
-          : hash_keys_(std::move(hashkeys)) {}
+      : hash_keys_(std::move(hashkeys)) {}
 
   inline PlanNodeType GetPlanNodeType() const { return PLAN_NODE_TYPE_HASH; }
 
@@ -40,7 +40,8 @@ class ExchangeHashPlan : public AbstractPlan {
     for (const auto &key : hash_keys_) {
       copied_hash_keys.push_back(std::unique_ptr<HashKeyType>(key->Copy()));
     }
-    return std::unique_ptr<peloton::planner::AbstractPlan>(new ExchangeHashPlan(copied_hash_keys));
+    return std::unique_ptr<peloton::planner::AbstractPlan>(
+        new ExchangeHashPlan(copied_hash_keys));
   }
 
  private:
