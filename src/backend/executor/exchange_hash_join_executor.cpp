@@ -16,7 +16,7 @@ namespace executor {
  */
     ExchangeHashJoinExecutor::ExchangeHashJoinExecutor(const planner::AbstractPlan *node,
                                                        ExecutorContext *executor_context)
-      : AbstractJoinExecutor(node, executor_context), lockfree_queue_(1000){
+      : AbstractJoinExecutor(node, executor_context){
     }
 
 
@@ -120,8 +120,8 @@ namespace executor {
                 if (pos_lists_builder.Size() > 0) {
                   output_tile->SetPositionListsAndVisibility(
                     pos_lists_builder.Release());
-                  // lockfree_buffered_output_tiles.push(output_tile.release());
-                  lockfree_queue_.TryPush(output_tile.release());
+                  lockfree_buffered_output_tiles.push(output_tile.release());
+                  // lockfree_queue_.TryPush(output_tile.release());
                 }
 
                 // Get the logical tile from right child
@@ -152,7 +152,9 @@ namespace executor {
         if (pos_lists_builder.Size() > 0) {
           LOG_TRACE("Join tile size : %lu \n", pos_lists_builder.Size());
           output_tile->SetPositionListsAndVisibility(pos_lists_builder.Release());
-          lockfree_queue_.TryPush(output_tile.release());
+          // lockfree_queue_.TryPush(output_tile.release());
+          lockfree_buffered_output_tiles.push(output_tile.release());
+
         }
       }
 
@@ -172,9 +174,13 @@ namespace executor {
     bool ExchangeHashJoinExecutor::DExecute() {
       // Loop until we have non-empty result tile or exit
       for (; ;) {
-        LogicalTile *output_tile = nullptr;
-        if (lockfree_queue_.TryPop(output_tile) == true) {
+        if (lockfree_buffered_output_tiles.empty() == false) {
+          LogicalTile *output_tile = nullptr;
+//          bool ret = lockfree_buffered_output_tiles.pop(output_tile);
+//          assert(ret);
+          lockfree_buffered_output_tiles.pop(output_tile);
           SetOutput(output_tile);
+          // exit 0
           return true;
         }
 
@@ -234,8 +240,13 @@ namespace executor {
           prepare_children_ = true;
         }
 
-        if (lockfree_queue_.TryPop(output_tile) == true) {
+        if (lockfree_buffered_output_tiles.empty() == false) {
+          LogicalTile *output_tile = nullptr;
+//          bool ret = lockfree_buffered_output_tiles.pop(output_tile);
+//          assert(ret);
+          lockfree_buffered_output_tiles.pop(output_tile);
           SetOutput(output_tile);
+          // exit 0
           return true;
         }
 
@@ -294,8 +305,8 @@ namespace executor {
         assert(pos_lists_builder.Size() > 0);
 
         output_tile->SetPositionListsAndVisibility(pos_lists_builder.Release());
-        // lockfree_buffered_output_tiles.push(output_tile.release());
-        lockfree_queue_.TryPush(output_tile.release());
+        lockfree_buffered_output_tiles.push(output_tile.release());
+        // lockfree_queue_.TryPush(output_tile.release());
 
         atomic_left_matching_idx.fetch_add(1);
         return true;
@@ -342,8 +353,8 @@ namespace executor {
 
 
         output_tile->SetPositionListsAndVisibility(pos_lists_builder.Release());
-        // lockfree_buffered_output_tiles.push(output_tile.release());
-        lockfree_queue_.TryPush(output_tile.release());
+        lockfree_buffered_output_tiles.push(output_tile.release());
+        // lockfree_queue_.TryPush(output_tile.release());
 
 
         atomic_right_matching_idx.fetch_add(1);

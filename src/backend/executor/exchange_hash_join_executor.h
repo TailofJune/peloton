@@ -158,8 +158,9 @@ namespace peloton {
       bool prepare_children_ = false;
       bool exec_outer_join_ = false;
 
+      boost::lockfree::queue<LogicalTile *, boost::lockfree::capacity<1000>> lockfree_buffered_output_tiles;
 
-      LockfreeQueue<LogicalTile * > lockfree_queue_;
+      // LockfreeQueue<LogicalTile * > lockfree_queue_;
       std::atomic<size_t> atomic_left_matching_idx;
       std::atomic<size_t> atomic_right_matching_idx;
 

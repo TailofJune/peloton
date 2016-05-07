@@ -6,6 +6,7 @@
 
 check_PROGRAMS += \
 				  exchange_seq_scan_test \
+				  exchange_hash_join_test \
 				  exchange_hash_test \
 				  logical_tile_test \
 				  mutate_test \
@@ -90,7 +91,7 @@ exchange_hash_test_SOURCES = \
                     $(executor_tests_common) \
                     executor/exchange_hash_test.cpp
 
-#exchange_hash_join_test_SOURCES = \
-#					$(executor_tests_common) \
-#						executor/exchange_hash_join_test.cpp \
-#						executor/join_tests_util.cpp
+exchange_hash_join_test_SOURCES = \
+					$(executor_tests_common) \
+						executor/exchange_hash_join_test.cpp \
+						executor/join_tests_util.cpp
