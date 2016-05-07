@@ -318,7 +318,7 @@ executor::AbstractExecutor *BuildExecutorTree(
    * Whether we want to enable intra-operator parallelism
    * Should have been made configurable in a configure file
    */
-  static const bool parallel_mode = true;
+  static const bool parallel_mode = false;
   // Base case
   if (plan == nullptr) return root;
 
