@@ -2,10 +2,18 @@
 ## General information
 Our project is about multi-threaded queries.
 The way we do this is like this:
+
 1.  Insert arbitrary exchange executors into a plan tree
 2.  Launch multiple threads (actually use a thread pool) to do the work parallelly in each exchange executor
 3.  Combine results from multiple sub-tasks
 4.  Maintain the same interface (GetOutput) as other executors so that exchange executors can be combined with normal executors
+
+## What we implemented
+
+1.  Insert exchange executors into an executor tree.
+2.  Exchange Sequential Scan Executor
+3.  Exchange Hash Executor
+4.  Exchange Hash Join Executor
 
 ## Relevant files
 **Modified**:
