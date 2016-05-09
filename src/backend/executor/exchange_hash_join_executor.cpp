@@ -23,10 +23,10 @@ bool ExchangeHashJoinExecutor::DInit() {
   auto status = AbstractJoinExecutor::DInit();
   if (status == false) return status;
 
-  const planner::AbstractJoinPlan &node____ =
+  const planner::AbstractJoinPlan &node_ =
       GetPlanNode<planner::AbstractJoinPlan>();
 
-  join_type_ = node____.GetJoinType();
+  join_type_ = node_.GetJoinType();
 
   hash_executor_ = reinterpret_cast<ExchangeHashExecutor *>(children_[1]);
 
@@ -223,11 +223,8 @@ bool ExchangeHashJoinExecutor::DExecute() {
 
     if (lockfree_buffered_output_tiles.empty() == false) {
       LogicalTile *output_tile = nullptr;
-      //          bool ret = lockfree_buffered_output_tiles.pop(output_tile);
-      //          assert(ret);
       lockfree_buffered_output_tiles.pop(output_tile);
       SetOutput(output_tile);
-      // exit 0
       return true;
     }
 

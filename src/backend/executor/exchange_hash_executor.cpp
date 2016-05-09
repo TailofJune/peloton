@@ -4,7 +4,7 @@
 
 #include "backend/executor/exchange_hash_executor.h"
 #include "backend/expression/tuple_value_expression.h"
-#include "backend/planner/exchange_hash_plan.h"
+#include "backend/planner/hash_plan.h"
 
 namespace peloton {
 namespace executor {
