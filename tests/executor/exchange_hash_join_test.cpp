@@ -15,8 +15,6 @@
 #include "backend/expression/expression_util.h"
 #include "backend/expression/tuple_value_expression.h"
 
-#include "backend/planner/exchange_hash_join_plan.h"
-#include "backend/planner/exchange_hash_plan.h"
 #include "backend/planner/hash_join_plan.h"
 #include "backend/planner/hash_plan.h"
 
@@ -33,17 +31,34 @@ using ::testing::NotNull;
 using ::testing::Return;
 using ::testing::InSequence;
 
+#define DISABLE_INDEX false
+
+// uncomment this line to enable speed_test
+//#define SPEEDTEST_ON
+
 namespace peloton {
 namespace test {
 
+
 class ExchangeHashJoinTests : public PelotonTest {};
 
+// Utility to build large test tables.
+// Example:
+//    BuildTestTableUtil join_test;
+//    join_test.CreateTestTable(1000, 3000, 20, false);
 class BuildTestTableUtil {
  public:
+  // Execute join test according to given params
+  // params set_workload and workload is used to set the workload
+  // of a thread.
   void ExecuteJoinTest(PlanNodeType join_algorithm, PelotonJoinType join_type,
                        oid_t join_test_type, bool set_workload = false,
                        size_t workload = 150);
 
+  // Create two testTables (left and right table) for exchange hash join test
+  // with given group_size, left_group_num and right_group_num.
+  // if param is_large_para_test is true, then will create special tables.
+  // If this function has been called before, then it will directly return.
   void CreateTestTable(size_t group_size, size_t left_group_num,
                        size_t right_group_num, bool is_large_para_test) {
     if (table_created_) {
@@ -60,7 +75,8 @@ class BuildTestTableUtil {
 
     txn_manager.BeginTransaction();
 
-    left_table_.reset(ExecutorTestsUtil::CreateTable(tile_group_size, false));
+    left_table_.reset(ExecutorTestsUtil::CreateTable(
+          static_cast<int>(tile_group_size), DISABLE_INDEX));
 
     if (is_large_para_test) {
       ExecutorTestsUtil::PopulateTableForParallelTest(
@@ -72,7 +88,8 @@ class BuildTestTableUtil {
           false, false, false);
     }
 
-    right_table_.reset(ExecutorTestsUtil::CreateTable(tile_group_size, false));
+    right_table_.reset(ExecutorTestsUtil::CreateTable(
+          static_cast<int>(tile_group_size), DISABLE_INDEX));
 
     if (is_large_para_test) {
       ExecutorTestsUtil::PopulateTableForParallelTest(
@@ -107,6 +124,7 @@ class BuildTestTableUtil {
   bool table_created_ = false;
 };
 
+// initialization of default values to build test tables
 size_t BuildTestTableUtil::tile_group_size = 5;
 size_t BuildTestTableUtil::left_table_tile_group_count = 3;
 size_t BuildTestTableUtil::right_table_tile_group_count = 2;
@@ -353,7 +371,7 @@ void BuildTestTableUtil::ExecuteJoinTest(PlanNodeType join_algorithm,
       const auto end = std::chrono::system_clock::now();
       const std::chrono::duration<double> diff = end - start;
       const double ms = diff.count() * 1000;
-      printf("HashJoin takes %lf ms\n", ms);
+      LOG_INFO("HashJoin takes %lf ms\n", ms);
 
     } break;
 
@@ -411,7 +429,7 @@ void BuildTestTableUtil::ExecuteJoinTest(PlanNodeType join_algorithm,
       const auto end = std::chrono::system_clock::now();
       const std::chrono::duration<double> diff = end - start;
       const double ms = diff.count() * 1000;
-      printf("ExchangeHashJoin takes %lf ms\n", ms);
+      LOG_INFO("ExchangeHashJoin takes %lf ms\n", ms);
 
     } break;
     default:
@@ -453,7 +471,7 @@ void BuildTestTableUtil::ExecuteJoinTest(PlanNodeType join_algorithm,
     }
   } else if (join_test_type == LargeTableCorrectnessTest) {
     // Check output
-    printf("RESULT ------ real result_tuple_count:%u, tuples_with_null:%u\n",
+    LOG_INFO("RESULT ------ real result_tuple_count:%u, tuples_with_null:%u\n",
            result_tuple_count, tuples_with_null);
     switch (join_type) {
       case JOIN_TYPE_INNER:
@@ -700,7 +718,6 @@ void ExpectNormalTileResults(size_t table_tile_group_count,
 
 //////////////////////////////////////////////////
 //                                              //
-//                                              //
 //                    Tests                     //
 //                                              //
 //////////////////////////////////////////////////
@@ -734,7 +751,6 @@ TEST_F(ExchangeHashJoinTests, JoinTypesTest) {
   BuildTestTableUtil join_test;
   join_test.CreateTestTable(5, 3, 2, false);
   // Go over all join algorithms
-
   for (auto join_algorithm : join_algorithms) {
     LOG_INFO("JOIN ALGORITHM :: %s",
              PlanNodeTypeToString(join_algorithm).c_str());
@@ -803,7 +819,6 @@ TEST_F(ExchangeHashJoinTests, JoinPredicateTest) {
   // Go over all join test types
   for (oid_t join_test_type = 0; join_test_type < join_test_types;
        join_test_type++) {
-    LOG_INFO("JOIN TEST_F ------------------------ :: %u", join_test_type);
 
     // Go over all join algorithms
     for (auto join_algorithm : join_algorithms) {
@@ -819,49 +834,31 @@ TEST_F(ExchangeHashJoinTests, JoinPredicateTest) {
   }
 }
 
-/*
-TEST_F(ExchangeHashJoinTests, LargeTableCorrectnessTest) {
-  BuildTestTableUtil join_test;
-  join_test.CreateTestTable(1000, 65, 20, true);
-
-  // join_test.ExecuteJoinTest(PLAN_NODE_TYPE_HASHJOIN, JOIN_TYPE_RIGHT,
-LargeTableCorrectnessTest);
-  join_test.ExecuteJoinTest(PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN, JOIN_TYPE_INNER,
-LargeTableCorrectnessTest, true, 10);
-  join_test.ExecuteJoinTest(PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN, JOIN_TYPE_RIGHT,
-LargeTableCorrectnessTest, true, 10);
-  join_test.ExecuteJoinTest(PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN, JOIN_TYPE_LEFT,
-LargeTableCorrectnessTest, true, 10);
-  join_test.ExecuteJoinTest(PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN, JOIN_TYPE_OUTER,
-LargeTableCorrectnessTest, true, 10);
-
-}
-
-
+#ifdef SPEEDTEST_ON
 TEST_F(ExchangeHashJoinTests, SpeedTest) {
   BuildTestTableUtil join_test;
   join_test.CreateTestTable(1000, 3000, 20, false);
-  printf("=================PLAN_NODE_TYPE_HASH_JOIN\n");
+  LOF_INFOFO("=================PLAN_NODE_TYPE_HASH_JOIN\n");
   join_test.ExecuteJoinTest(PLAN_NODE_TYPE_HASHJOIN, JOIN_TYPE_INNER,
 SPEED_TEST);
-  printf("=================PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN, 50\n");
+  LOF_INFO("=================PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN, 50\n");
   join_test.ExecuteJoinTest(PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN, JOIN_TYPE_INNER,
 SPEED_TEST, true, 50);
-  printf("=================PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN, 100\n");
+  LOF_INFO("=================PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN, 100\n");
   join_test.ExecuteJoinTest(PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN, JOIN_TYPE_INNER,
 SPEED_TEST, true, 100);
-  printf("=================PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN, 150\n");
+  LOF_INFO("=================PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN, 150\n");
   join_test.ExecuteJoinTest(PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN, JOIN_TYPE_INNER,
 SPEED_TEST, true, 150);
-  printf("=================PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN, 200\n");
+  LOF_INFO("=================PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN, 200\n");
   join_test.ExecuteJoinTest(PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN, JOIN_TYPE_INNER,
 SPEED_TEST, true, 200);
-  printf("=================PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN, 250\n");
+  LOF_INFO("=================PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN, 250\n");
   join_test.ExecuteJoinTest(PLAN_NODE_TYPE_EXCHANGE_HASH_JOIN, JOIN_TYPE_INNER,
 SPEED_TEST, true, 250);
 }
 
-*/
+#endif /* SPEEDTEST_ON */
 
 }  // namespace test
 }  // namespace peloton
