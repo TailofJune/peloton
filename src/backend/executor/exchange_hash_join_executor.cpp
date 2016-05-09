@@ -36,7 +36,7 @@ bool ExchangeHashJoinExecutor::DInit() {
 }
 
 /**
- * @brief Buildp hase for right table.
+ * @brief Build phase for right table.
  * @param barrier to wait
  */
 void ExchangeHashJoinExecutor::GetRightHashTable(Barrier *barrier) {
@@ -50,6 +50,9 @@ void ExchangeHashJoinExecutor::GetRightHashTable(Barrier *barrier) {
   barrier->Release();
 }
 
+/**
+ * @brief Get left child's scan result.
+ */
 void ExchangeHashJoinExecutor::GetLeftScanResult(Barrier *barrier) {
   LOG_INFO("Build Left Child Scan Task picked up \n");
   while (children_[0]->Execute()) {
@@ -66,6 +69,9 @@ void ExchangeHashJoinExecutor::GetLeftScanResult(Barrier *barrier) {
   barrier->Release();
 }
 
+/**
+ * @brief Probe phase, each thread takes one probe task.
+ */
 void ExchangeHashJoinExecutor::Probe(std::atomic<thread_no> *no,
                                      PesudoBarrier *barrier) {
   LOG_INFO("Probe Task picked up \n");
@@ -244,7 +250,6 @@ bool ExchangeHashJoinExecutor::DExecute() {
   }
 }
 
-// todo: 1. parallel real outer join (not empty right child)
 bool ExchangeHashJoinExecutor::BuildLeftJoinOutput() {
   LOG_INFO("ExchangeHashJoinExecutor::BuildLeftJoinOutput called.\n");
   auto curt_left_matching_idx = atomic_left_matching_idx.fetch_add(0);
@@ -293,7 +298,6 @@ bool ExchangeHashJoinExecutor::BuildLeftJoinOutput() {
  * build right join output by adding null rows for every row from left tile
  * which doesn't have a match
  */
-// todo: parallel real outer join (not empty right child)
 bool ExchangeHashJoinExecutor::BuildRightJoinOutput() {
   auto curt_right_matching_idx = atomic_right_matching_idx.fetch_add(0);
   while (curt_right_matching_idx < exhj_no_matching_right_row_sets_.size()) {
