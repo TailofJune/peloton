@@ -87,15 +87,15 @@ bool ExchangeSeqScanExecutor::DExecute() {
       // In this case, wrap the scanning of each tile group into an individual
       // task
       // Break the whole execution into multiple tasks
-      for (oid_t no = 0; no < tile_group_number_; ++no) {
+      for (oid_t tile_group_itr = 0; tile_group_itr<tile_group_number_; ++tile_group_itr) {
         ThreadManager::GetInstance().AddTask(
-            std::bind(&ExchangeSeqScanExecutor::ScanOneTileGroup, this, no,
+            std::bind(&ExchangeSeqScanExecutor::ScanOneTileGroup, this, tile_group_itr,
                       concurrency::current_txn));
       }
       {
         // Wait for all tasks to be done
         std::unique_lock<std::mutex> lock(result_lock_);
-        while (finished_number_ < tile_group_number_) cv_.wait(lock);
+        while (finished_number_ < tile_group_number_) wait_cv_.wait(lock);
       }
     }
     done_ = true;
@@ -114,7 +114,7 @@ bool ExchangeSeqScanExecutor::DExecute() {
  * Do a table scan on one tile group
  */
 void ExchangeSeqScanExecutor::ScanOneTileGroup(
-    const oid_t no, concurrency::Transaction * /*unused*/) {
+        const oid_t tile_group_itr, concurrency::Transaction *transaction) {
   /*
    * This part is basically the same as single thread version of sequential scan
    * executor, except
@@ -139,7 +139,11 @@ void ExchangeSeqScanExecutor::ScanOneTileGroup(
    * This is also the reason why we didn't merge this part of code into
    * seq_scan_executor
    */
-  auto tile_group = target_table_->GetTileGroup(no);
+  concurrency::current_txn = transaction;
+  auto &transaction_manager =
+          concurrency::TransactionManagerFactory::GetInstance();
+  auto tile_group = target_table_->GetTileGroup(tile_group_itr);
+  auto tile_group_header = tile_group->GetHeader();
   oid_t active_tuple_count = tile_group->GetNextTupleSlot();
 
   // Construct position list by looping through tile group
@@ -147,15 +151,18 @@ void ExchangeSeqScanExecutor::ScanOneTileGroup(
   std::vector<oid_t> position_list;
 
   for (oid_t tuple_id = 0; tuple_id < active_tuple_count; tuple_id++) {
-    if (predicate_ == nullptr) {
-      position_list.push_back(tuple_id);
-    } else {
-      expression::ContainerTuple<storage::TileGroup> tuple(tile_group.get(),
-                                                           tuple_id);
-      auto eval =
-          predicate_->Evaluate(&tuple, nullptr, executor_context_).IsTrue();
-      if (eval == true) {
+    if (transaction_manager.IsVisible(tile_group_header, tuple_id)) {
+      if(predicate_==nullptr) {
         position_list.push_back(tuple_id);
+      }
+      else {
+        expression::ContainerTuple<storage::TileGroup> tuple(tile_group.get(),
+                                                             tuple_id);
+        auto eval =
+                predicate_->Evaluate(&tuple, nullptr, executor_context_).IsTrue();
+        if(eval==true) {
+          position_list.push_back(tuple_id);
+        }
       }
     }
   }
@@ -175,7 +182,7 @@ void ExchangeSeqScanExecutor::ScanOneTileGroup(
     ++finished_number_;
     if (finished_number_ == tile_group_number_)
       // wake up coordinate thread
-      cv_.notify_one();
+      wait_cv_.notify_one();
   }
 }
 }

@@ -26,7 +26,7 @@ class ExchangeSeqScanExecutor : public AbstractExecutor {
  protected:
   bool DInit();
   bool DExecute();
-  void ScanOneTileGroup(const oid_t no, concurrency::Transaction *transaction);
+  void ScanOneTileGroup(const oid_t tile_group_itr, concurrency::Transaction *transaction);
 
  protected:
   /** @brief Selection predicate. */
@@ -43,7 +43,7 @@ class ExchangeSeqScanExecutor : public AbstractExecutor {
   // lock to protect result_ and finished_number_
   std::mutex result_lock_;
   // coordinate thread waits on this variable, wait for all tasks to finish
-  std::condition_variable cv_;
+  std::condition_variable wait_cv_;
   std::queue<std::unique_ptr<LogicalTile>> result_;
   // total number of tile groups which is also the total number of tasks
   oid_t tile_group_number_ = 0;

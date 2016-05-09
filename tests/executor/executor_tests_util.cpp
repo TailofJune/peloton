@@ -417,6 +417,35 @@ storage::DataTable *ExecutorTestsUtil::CreateTable(
   return table;
 }
 
+storage::DataTable *ExecutorTestsUtil::CreateTable(
+        size_t tile_group_num, size_t row_num) {
+  std::unique_ptr<storage::DataTable> table(
+          ExecutorTestsUtil::CreateTable((int)row_num, false));
+  TestingHarness::GetInstance().GetNextTileGroupId();
+  size_t index = 0;
+  ExecutorTestsUtil::PopulateTiles(table->GetTileGroup(index++), row_num);
+  for (size_t i = 0; i < tile_group_num - 1; ++i) {
+    std::vector<catalog::Schema> schemas1(
+            {catalog::Schema({ExecutorTestsUtil::GetColumnInfo(0),
+                              ExecutorTestsUtil::GetColumnInfo(1)}),
+             catalog::Schema({ExecutorTestsUtil::GetColumnInfo(2),
+                              ExecutorTestsUtil::GetColumnInfo(3)})});
+    std::map<oid_t, std::pair<oid_t, oid_t>> column_map1;
+    column_map1[0] = std::make_pair(0, 0);
+    column_map1[1] = std::make_pair(0, 1);
+    column_map1[2] = std::make_pair(1, 0);
+    column_map1[3] = std::make_pair(1, 1);
+    // Create tile groups.
+    table->AddTileGroup(std::shared_ptr<storage::TileGroup>(
+            storage::TileGroupFactory::GetTileGroup(
+                    INVALID_OID, INVALID_OID,
+                    TestingHarness::GetInstance().GetNextTileGroupId(), table.get(),
+                    schemas1, column_map1, row_num)));
+    ExecutorTestsUtil::PopulateTiles(table->GetTileGroup(index++), row_num);
+  }
+  return table.release();
+}
+
 /**
  * @brief Convenience method to create table for test.
  *

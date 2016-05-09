@@ -1,7 +1,3 @@
-//
-// Created by wendongli on 4/18/16.
-//
-
 #include <chrono>
 #include <memory>
 
@@ -45,87 +41,8 @@ namespace test {
 
 class ExchangeHashExecutorTests : public PelotonTest {};
 
-/*
- * create a table with tile_group_num tiles, each of which has row_num rows.
- * heterogeneous table
- */
 storage::DataTable *CreateTable(size_t tile_group_num, size_t row_num) {
-  std::unique_ptr<storage::DataTable> table(
-      ExecutorTestsUtil::CreateTable(row_num, false));
-  TestingHarness::GetInstance().GetNextTileGroupId();
-  size_t index = 0;
-  // the first tile group
-  ExecutorTestsUtil::PopulateTiles(table->GetTileGroup(index++), row_num);
-  if (tile_group_num == 1) {
-    return table.release();
-  }
-  // the second tile group if number of tile groups is even
-  if (tile_group_num % 2 == 0) {
-    std::vector<catalog::Schema> schemas2(
-        {catalog::Schema({ExecutorTestsUtil::GetColumnInfo(0)}),
-         catalog::Schema({ExecutorTestsUtil::GetColumnInfo(1),
-                          ExecutorTestsUtil::GetColumnInfo(2),
-                          ExecutorTestsUtil::GetColumnInfo(3)})});
-    std::map<oid_t, std::pair<oid_t, oid_t>> column_map2;
-    column_map2[0] = std::make_pair(0, 0);
-    column_map2[1] = std::make_pair(1, 0);
-    column_map2[2] = std::make_pair(1, 1);
-    column_map2[3] = std::make_pair(1, 2);
-
-    table->AddTileGroup(std::shared_ptr<storage::TileGroup>(
-        storage::TileGroupFactory::GetTileGroup(
-            INVALID_OID, INVALID_OID,
-            TestingHarness::GetInstance().GetNextTileGroupId(), table.get(),
-            schemas2, column_map2, row_num)));
-    ExecutorTestsUtil::PopulateTiles(table->GetTileGroup(index++), row_num);
-  }
-  // all the other tile groups
-  tile_group_num = (tile_group_num - 1) / 2;
-  for (size_t i = 0; i < tile_group_num; ++i) {
-    // Schema for first tile group. Vertical partition is 2, 2.
-    std::vector<catalog::Schema> schemas1(
-        {catalog::Schema({ExecutorTestsUtil::GetColumnInfo(0),
-                          ExecutorTestsUtil::GetColumnInfo(1)}),
-         catalog::Schema({ExecutorTestsUtil::GetColumnInfo(2),
-                          ExecutorTestsUtil::GetColumnInfo(3)})});
-
-    // Schema for second tile group. Vertical partition is 1, 3.
-    std::vector<catalog::Schema> schemas2(
-        {catalog::Schema({ExecutorTestsUtil::GetColumnInfo(0)}),
-         catalog::Schema({ExecutorTestsUtil::GetColumnInfo(1),
-                          ExecutorTestsUtil::GetColumnInfo(2),
-                          ExecutorTestsUtil::GetColumnInfo(3)})});
-
-    std::map<oid_t, std::pair<oid_t, oid_t>> column_map1;
-    column_map1[0] = std::make_pair(0, 0);
-    column_map1[1] = std::make_pair(0, 1);
-    column_map1[2] = std::make_pair(1, 0);
-    column_map1[3] = std::make_pair(1, 1);
-
-    std::map<oid_t, std::pair<oid_t, oid_t>> column_map2;
-    column_map2[0] = std::make_pair(0, 0);
-    column_map2[1] = std::make_pair(1, 0);
-    column_map2[2] = std::make_pair(1, 1);
-    column_map2[3] = std::make_pair(1, 2);
-
-    // Create tile groups.
-    table->AddTileGroup(std::shared_ptr<storage::TileGroup>(
-        storage::TileGroupFactory::GetTileGroup(
-            INVALID_OID, INVALID_OID,
-            TestingHarness::GetInstance().GetNextTileGroupId(), table.get(),
-            schemas1, column_map1, row_num)));
-
-    table->AddTileGroup(std::shared_ptr<storage::TileGroup>(
-        storage::TileGroupFactory::GetTileGroup(
-            INVALID_OID, INVALID_OID,
-            TestingHarness::GetInstance().GetNextTileGroupId(), table.get(),
-            schemas2, column_map2, row_num)));
-
-    ExecutorTestsUtil::PopulateTiles(table->GetTileGroup(index++), row_num);
-    ExecutorTestsUtil::PopulateTiles(table->GetTileGroup(index++), row_num);
-  }
-
-  return table.release();
+  return ExecutorTestsUtil::CreateTable(tile_group_num, row_num);
 }
 
 void ExpectNormalTileResults(size_t table_tile_group_count,
@@ -169,7 +86,7 @@ void ExpectNormalTileResults(size_t table_tile_group_count,
 
 /*
  * Build two hash tables on the same table using HashExecutor and
- * ExchangHashExecutor
+ * ExchangeHashExecutor
  * Compare the results (which should be identical)
  * A little confusion clarification:
  * There is only one table, even though its name (riglt_table) somehow indicates
@@ -186,8 +103,7 @@ TEST_F(ExchangeHashExecutorTests, CorrectnessTest) {
   constexpr size_t right_table_tile_group_count = tile_num;
 
   // Create table.
-  std::unique_ptr<storage::DataTable> right_table(
-      CreateTable(tile_num, row_num));
+  std::unique_ptr<storage::DataTable> right_table(CreateTable(tile_num, row_num));
 
   LOG_INFO("CreateTable done");
 
@@ -306,8 +222,7 @@ TEST_F(ExchangeHashExecutorTests, SpeedTest) {
   constexpr size_t row_num = 100000;
 
   // Create table.
-  std::unique_ptr<storage::DataTable> right_table(CreateTable(tile_num,
-row_num));
+  std::unique_ptr<storage::DataTable> right_table(CreateTable(tile_num, row_num));
 
   LOG_INFO("CreateTable done");
 

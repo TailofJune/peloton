@@ -65,6 +65,9 @@ class ExecutorTestsUtil {
       int tuples_per_tilegroup_count = TESTS_TUPLES_PER_TILEGROUP,
       bool indexes = true);
 
+  /** @brief Create a table with specified number of tile groups, each of which has specified number of rows**/
+  static storage::DataTable *CreateTable(size_t tile_group_num, size_t row_num);
+
   /** @brief Creates a basic table with allocated and populated tuples */
   static storage::DataTable *CreateAndPopulateTable();
 

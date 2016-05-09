@@ -1,7 +1,3 @@
-//
-// Created by wendongli on 4/17/16.
-//
-
 #include <chrono>
 #include <ctime>
 #include <memory>
@@ -40,118 +36,11 @@ namespace peloton {
 namespace test {
 
 class ExchangeSeqScanTests : public PelotonTest {};
+// Set of tuples that gets selected in the predicate
 const std::set<oid_t> g_tuple_ids({0, 3});
 
-/*
- * create a table with tile_group_num tiles, each of which has row_num rows.
- * heterogeneous table.
- */
 storage::DataTable *CreateTable(size_t tile_group_num, size_t row_num) {
-  std::unique_ptr<storage::DataTable> table(
-      ExecutorTestsUtil::CreateTable(row_num, false));
-  TestingHarness::GetInstance().GetNextTileGroupId();
-  size_t index = 0;
-  ExecutorTestsUtil::PopulateTiles(table->GetTileGroup(index++), row_num);
-  if (tile_group_num == 1) {
-    return table.release();
-  }
-  if (tile_group_num % 2 == 0) {
-    std::vector<catalog::Schema> schemas2(
-        {catalog::Schema({ExecutorTestsUtil::GetColumnInfo(0)}),
-         catalog::Schema({ExecutorTestsUtil::GetColumnInfo(1),
-                          ExecutorTestsUtil::GetColumnInfo(2),
-                          ExecutorTestsUtil::GetColumnInfo(3)})});
-    std::map<oid_t, std::pair<oid_t, oid_t>> column_map2;
-    column_map2[0] = std::make_pair(0, 0);
-    column_map2[1] = std::make_pair(1, 0);
-    column_map2[2] = std::make_pair(1, 1);
-    column_map2[3] = std::make_pair(1, 2);
-
-    table->AddTileGroup(std::shared_ptr<storage::TileGroup>(
-        storage::TileGroupFactory::GetTileGroup(
-            INVALID_OID, INVALID_OID,
-            TestingHarness::GetInstance().GetNextTileGroupId(), table.get(),
-            schemas2, column_map2, row_num)));
-    ExecutorTestsUtil::PopulateTiles(table->GetTileGroup(index++), row_num);
-  }
-  tile_group_num = (tile_group_num - 1) / 2;
-  for (size_t i = 0; i < tile_group_num; ++i) {
-    // Schema for first tile group. Vertical partition is 2, 2.
-    std::vector<catalog::Schema> schemas1(
-        {catalog::Schema({ExecutorTestsUtil::GetColumnInfo(0),
-                          ExecutorTestsUtil::GetColumnInfo(1)}),
-         catalog::Schema({ExecutorTestsUtil::GetColumnInfo(2),
-                          ExecutorTestsUtil::GetColumnInfo(3)})});
-
-    // Schema for second tile group. Vertical partition is 1, 3.
-    std::vector<catalog::Schema> schemas2(
-        {catalog::Schema({ExecutorTestsUtil::GetColumnInfo(0)}),
-         catalog::Schema({ExecutorTestsUtil::GetColumnInfo(1),
-                          ExecutorTestsUtil::GetColumnInfo(2),
-                          ExecutorTestsUtil::GetColumnInfo(3)})});
-
-    std::map<oid_t, std::pair<oid_t, oid_t>> column_map1;
-    column_map1[0] = std::make_pair(0, 0);
-    column_map1[1] = std::make_pair(0, 1);
-    column_map1[2] = std::make_pair(1, 0);
-    column_map1[3] = std::make_pair(1, 1);
-
-    std::map<oid_t, std::pair<oid_t, oid_t>> column_map2;
-    column_map2[0] = std::make_pair(0, 0);
-    column_map2[1] = std::make_pair(1, 0);
-    column_map2[2] = std::make_pair(1, 1);
-    column_map2[3] = std::make_pair(1, 2);
-
-    // Create tile groups.
-    table->AddTileGroup(std::shared_ptr<storage::TileGroup>(
-        storage::TileGroupFactory::GetTileGroup(
-            INVALID_OID, INVALID_OID,
-            TestingHarness::GetInstance().GetNextTileGroupId(), table.get(),
-            schemas1, column_map1, row_num)));
-
-    table->AddTileGroup(std::shared_ptr<storage::TileGroup>(
-        storage::TileGroupFactory::GetTileGroup(
-            INVALID_OID, INVALID_OID,
-            TestingHarness::GetInstance().GetNextTileGroupId(), table.get(),
-            schemas2, column_map2, row_num)));
-
-    ExecutorTestsUtil::PopulateTiles(table->GetTileGroup(index++), row_num);
-    ExecutorTestsUtil::PopulateTiles(table->GetTileGroup(index++), row_num);
-  }
-
-  return table.release();
-}
-
-/*
- * create a table with tile_group_num tiles, each of which has row_num rows.
- * homogeneous table
- */
-storage::DataTable *CreateTable(size_t tile_group_num, size_t row_num, bool) {
-  std::unique_ptr<storage::DataTable> table(
-      ExecutorTestsUtil::CreateTable(row_num, false));
-  TestingHarness::GetInstance().GetNextTileGroupId();
-  size_t index = 0;
-  ExecutorTestsUtil::PopulateTiles(table->GetTileGroup(index++), row_num);
-  for (size_t i = 0; i < tile_group_num - 1; ++i) {
-    std::vector<catalog::Schema> schemas1(
-        {catalog::Schema({ExecutorTestsUtil::GetColumnInfo(0),
-                          ExecutorTestsUtil::GetColumnInfo(1)}),
-         catalog::Schema({ExecutorTestsUtil::GetColumnInfo(2),
-                          ExecutorTestsUtil::GetColumnInfo(3)})});
-    std::map<oid_t, std::pair<oid_t, oid_t>> column_map1;
-    column_map1[0] = std::make_pair(0, 0);
-    column_map1[1] = std::make_pair(0, 1);
-    column_map1[2] = std::make_pair(1, 0);
-    column_map1[3] = std::make_pair(1, 1);
-    // Create tile groups.
-    table->AddTileGroup(std::shared_ptr<storage::TileGroup>(
-        storage::TileGroupFactory::GetTileGroup(
-            INVALID_OID, INVALID_OID,
-            TestingHarness::GetInstance().GetNextTileGroupId(), table.get(),
-            schemas1, column_map1, row_num)));
-    ExecutorTestsUtil::PopulateTiles(table->GetTileGroup(index++), row_num);
-  }
-  return table.release();
+  return ExecutorTestsUtil::CreateTable(tile_group_num, row_num);
 }
 
 expression::AbstractExpression *CreatePredicate(
@@ -197,27 +86,18 @@ expression::AbstractExpression *CreatePredicate(
   return predicate;
 }
 
-double GetRunTime(executor::ExchangeSeqScanExecutor &executor,
-                  std::vector<executor::LogicalTile *> *result) {
+/*
+ * Run the given executor to fetch all results
+ * Return the time it takes in milliseconds
+ */
+double RunTest(executor::AbstractExecutor &executor,
+               std::vector<std::unique_ptr<executor::LogicalTile>> *result) {
   const auto start = std::chrono::system_clock::now();
   EXPECT_TRUE(executor.Init());
   while (executor.Execute()) {
-    executor::LogicalTile *temp = executor.GetOutput();
-    if (result) result->push_back(temp);
-  }
-  const auto end = std::chrono::system_clock::now();
-  const std::chrono::duration<double> diff = end - start;
-  const double ms = diff.count() * 1000;
-  return ms;
-}
-
-double GetRunTime(executor::SeqScanExecutor &executor,
-                  std::vector<std::unique_ptr<executor::LogicalTile>> *result) {
-  const auto start = std::chrono::system_clock::now();
-  EXPECT_TRUE(executor.Init());
-  while (executor.Execute()) {
-    executor::LogicalTile *temp = executor.GetOutput();
-    if (result) result->emplace_back(temp);
+    if (result) {
+      result->emplace_back(executor.GetOutput());
+    }
   }
   const auto end = std::chrono::system_clock::now();
   const std::chrono::duration<double> diff = end - start;
@@ -244,8 +124,8 @@ TEST_F(ExchangeSeqScanTests, LeafNodeCorrectnessTest) {
       new executor::ExecutorContext(txn));
 
   executor::ExchangeSeqScanExecutor executor(&node, context.get());
-  std::vector<executor::LogicalTile *> result;
-  GetRunTime(executor, &result);
+  std::vector<std::unique_ptr<executor::LogicalTile>> result;
+  RunTest(executor, &result);
 
   size_t expected_num_tiles = table->GetTileGroupCount();
   size_t expected_num_cols = column_ids.size();
@@ -288,10 +168,10 @@ TEST_F(ExchangeSeqScanTests, LeafNodeCorrectnessTest) {
     EXPECT_EQ(0, expected_tuples_left.size());
   }
 
-  for (auto tile : result) delete tile;
   txn_manager.CommitTransaction();
 }
 
+/*
 TEST_F(ExchangeSeqScanTests, LeafNodeSpeedTest) {
   constexpr size_t tile_num = 100000;
   constexpr size_t row_num = 1000;
@@ -316,8 +196,8 @@ TEST_F(ExchangeSeqScanTests, LeafNodeSpeedTest) {
     std::unique_ptr<executor::ExecutorContext> context(
         new executor::ExecutorContext(txn));
     executor::ExchangeSeqScanExecutor executor(&node, context.get());
-    std::vector<executor::LogicalTile *> result;
-    double duration1 = GetRunTime(executor, &result);
+    std::vector<std::unique_ptr<executor::LogicalTile>> result;
+    double duration1 = RunTest(executor, &result);
     time += duration1;
     txn_manager.CommitTransaction();
     LOG_INFO("parallel: %lf ms", duration1);
@@ -337,10 +217,11 @@ TEST_F(ExchangeSeqScanTests, LeafNodeSpeedTest) {
         new executor::ExecutorContext(txn2));
     executor::SeqScanExecutor executor2(&node2, context2.get());
     std::vector<std::unique_ptr<executor::LogicalTile>> result2;
-    double duration2 = GetRunTime(executor2, &result2);
+    double duration2 = RunTest(executor2, &result2);
     txn_manager.CommitTransaction();
     LOG_INFO("single thread: %lf ms", duration2);
   }
 }
+*/
 }
 }

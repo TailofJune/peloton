@@ -27,24 +27,29 @@ namespace executor {
 class Barrier {
  public:
   typedef std::uint_least32_t thread_no;
+
   Barrier(thread_no total) : total_(total) {}
+  Barrier(const Barrier &) = delete;
+  Barrier(Barrier &&) = delete;
+  Barrier &operator=(const Barrier &) = delete;
+
   void Release() {
     std::lock_guard<std::mutex> lock(mutex_);
     ++count_;
     assert(count_ <= total_);
-    if (count_ == total_) cv_.notify_one();
+    if (count_ == total_) condition_variable_.notify_one();
   }
 
   void Wait() {
     std::unique_lock<std::mutex> lock(mutex_);
-    while (count_ < total_) cv_.wait(lock);
+    while (count_ < total_) condition_variable_.wait(lock);
   }
 
  private:
   // total number of worker threads
   const thread_no total_;
   std::mutex mutex_;
-  std::condition_variable cv_;
+  std::condition_variable condition_variable_;
   size_t count_ = 0;
 };
 }

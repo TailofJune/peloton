@@ -1,7 +1,3 @@
-//
-// Created by wendongli on 5/5/16.
-//
-
 #pragma once
 
 #include <unordered_map>
