@@ -63,7 +63,7 @@ class ExecutorTestsUtil {
   /** @brief Creates a basic table with allocated but not populated tuples */
   static storage::DataTable *CreateTable(
       int tuples_per_tilegroup_count = TESTS_TUPLES_PER_TILEGROUP,
-      bool indexes = true);
+      bool indexes = true, oid_t table_oid = INVALID_OID);
 
   /** @brief Create a table with specified number of tile groups, each of which has specified number of rows**/
   static storage::DataTable *CreateTable(size_t tile_group_num, size_t row_num);
